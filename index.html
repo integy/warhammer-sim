@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚔️ Warhammer 40K WTC Simulator</title>
+    <style>
+        :root {
+            --bg: #0d0d0d;
+            --bg-secondary: #1a1a1a;
+            --gold: #c9a227;
+            --gold-dim: #8a7019;
+            --text: #e0e0e0;
+            --text-dim: #888;
+            --danger: #c92a2a;
+            --success: #2a9d8f;
+            --phase-movement: #4dabf7;
+            --phase-shooting: #f76707;
+            --phase-charge: #e03131;
+            --phase-fight: #be4bdb;
+            --phase-morale: #862e9c;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        
+        h1 {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--bg-secondary), #252525);
+            border-bottom: 2px solid var(--gold);
+            font-size: 1.8rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+        
+        h1 span { color: var(--gold); }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 280px 1fr 280px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .panel {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid #333;
+        }
+        
+        .panel h2 {
+            font-size: 0.9rem;
+            color: var(--gold);
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #333;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        /* Phase Tracker */
+        .phase-display {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .turn-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 0.85rem;
+        }
+        
+        .turn-info span {
+            background: #333;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        
+        .phase-track {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .phase {
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+        
+        .phase:hover {: 0. opacity8; }
+        
+        .phase.active {
+            border-color: var(--gold);
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(201, 162, 39, 0.3);
+        }
+        
+        .phase.command { background: #333; }
+        .phase.movement { background: var(--phase-movement); color: #000; }
+        .phase.shooting { background: var(--phase-shooting); color: #000; }
+        .phase.charge { background: var(--phase-charge); }
+        .phase.fight { background: var(--phase-fight); color: #000; }
+        .phase.morale { background: var(--phase-morale); }
+        
+        /* Dice Roller */
+        .dice-section {
+            text-align: center;
+        }
+        
+        .dice-result {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 20px 0;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .dice-result.success { color: var(--success); }
+        .dice-result.fail { color: var(--danger); }
+        
+        .dice-btn {
+            background: var(--gold);
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.2s;
+        }
+        
+        .dice-btn:hover {
+            background: var(--gold-dim);
+            transform: scale(1.02);
+        }
+        
+        .dice-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .dice-controls select, .dice-controls input {
+            background: #333;
+            color: var(--text);
+            border: 1px solid #444;
+            padding: 8px;
+            border-radius: 4px;
+            width: 100%;
+        }
+        
+        .dice-controls label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        /* Score Panel */
+        .score-section {
+            margin-bottom: 20px;
+        }
+        
+        .score-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #333;
+        }
+        
+        .score-row:last-child {
+            border-bottom: none;
+            font-weight: bold;
+            color: var(--gold);
+            font-size: 1.1rem;
+        }
+        
+        .score-input {
+            width: 60px;
+            background: #333;
+            color: var(--text);
+            border: 1px solid #444;
+            padding: 4px 8px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        /* Army List */
+        .army-section {
+            margin-bottom: 15px;
+        }
+        
+        .unit-card {
+            background: #252525;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            border-left: 3px solid var(--gold);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .unit-card:hover {
+            background: #2d2d2d;
+        }
+        
+        .unit-card.selected {
+            border-left-color: var(--success);
+            background: #1d2d1d;
+        }
+        
+        .unit-name {
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+        
+        .unit-stats {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+        
+        .unit-weapons {
+            font-size: 0.7rem;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        /* Add Unit Form */
+        .add-unit {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .add-unit input {
+            flex: 1;
+            background: #333;
+            color: var(--text);
+            border: 1px solid #444;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        
+        .add-unit button {
+            background: var(--success);
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        /* Objectives */
+        .objectives {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        
+        .objective {
+            background: #252525;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            text-align: center;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        
+        .objective.selected {
+            border-color: var(--gold);
+            background: #2d2d1a;
+        }
+        
+        .objective.complete {
+            background: #1d2d1d;
+            border-color: var(--success);
+        }
+        
+        /* Board Area */
+        .board-area {
+            min-height: 500px;
+            background: #151515;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        .board-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+        }
+        
+        .board-overlay span {
+            background: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        
+        /* Stats */
+        .cp-display {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .cp-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid var(--gold);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0 auto;
+        }
+        
+        .cp-label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-top: 5px;
+        }
+        
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+        }
+        
+        .btn-small {
+            flex: 1;
+            background: #333;
+            color: var(--text);
+            border: 1px solid #444;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        
+        .btn-small:hover {
+            background: #444;
+        }
+        
+        .btn-small.danger {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+        
+        .btn-small.danger:hover {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        /* WTC Info */
+        .wtc-info {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 0.75rem;
+            border: 1px solid var(--gold-dim);
+        }
+        
+        .wtc-info strong {
+            color: var(--gold);
+        }
+    </style>
+</head>
+<body>
+    <h1>⚔️ Warhammer 40K <span>WTC Simulator</span></h1>
+    
+    <div class="container">
+        <!-- Left Panel: Army -->
+        <div class="panel">
+            <h2>🎖️ Army List</h2>
+            
+            <div class="army-section">
+                <div class="add-unit">
+                    <input type="text" id="unitName" placeholder="Unit name...">
+                    <button onclick="addUnit()">+</button>
+                </div>
+            </div>
+            
+            <div id="armyList"></div>
+            
+            <div class="btn-group">
+                <button class="btn-small" onclick="saveArmy()">💾 Save</button>
+                <button class="btn-small danger" onclick="clearArmy()">🗑️ Clear</button>
+            </div>
+            
+            <div style="margin-top: 15px; font-size: 0.8rem; color: var(--text-dim);">
+                Total Points: <span id="totalPoints" style="color: var(--gold);">0</span>
+            </div>
+        </div>
+        
+        <!-- Center Panel: Board & Dice -->
+        <div class="panel">
+            <div class="board-area">
+                <canvas id="gameCanvas" width="600" height="500"></canvas>
+                <div class="board-overlay">
+                    <span>⚔️ WTC 2025/26</span>
+                    <span id="boardTurn">Turn 1</span>
+                </div>
+            </div>
+            
+            <div class="dice-section">
+                <h2 style="margin-top: 15px;">🎲 WTC Dice Roller</h2>
+                
+                <div class="dice-controls">
+                    <div>
+                        <label>Roll Type</label>
+                        <select id="rollType">
+                            <option value="hit">Hit Roll (BS/WS)</option>
+                            <option value="wound">Wound Roll (S vs T)</option>
+                            <option value="save">Save Roll (AP)</option>
+                            <option value="morale">Morale Test</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Target</label>
+                        <input type="number" id="targetNum" value="3" min="2" max="6">
+                    </div>
+                    <div>
+                        <label>Modifier</label>
+                        <input type="number" id="rollMod" value="0" min="-2" max="2">
+                    </div>
+                    <div>
+                        <label>Reroll</label>
+                        <select id="reroll">
+                            <option value="none">None</option>
+                            <option value="1s">Reroll 1s</option>
+                            <option value="failed">Reroll Failed</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button class="dice-btn" onclick="rollDice()">ROLL DICE</button>
+                
+                <div class="dice-result" id="diceResult">-</div>
+                
+                <div style="font-size: 0.75rem; color: var(--text-dim);">
+                    Last: <span id="lastRoll">-</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Panel: Phase & Score -->
+        <div class="panel">
+            <h2>📊 Game Info</h2>
+            
+            <div class="wtc-info">
+                <strong>WTC Rules:</strong><br>
+                5 Rounds • 3 Hours<br>
+                Win: 20BP • Draw: 15BP • Loss: 12BP
+            </div>
+            
+            <div class="phase-display">
+                <div class="turn-info">
+                    <span>Round: <strong id="roundNum">1</strong>/5</span>
+                    <span>Turn: <strong id="turnNum">1</strong></span>
+                </div>
+                
+                <div class="phase-track">
+                    <div class="phase command active" data-phase="command" onclick="setPhase('command')">1. Command</div>
+                    <div class="phase movement" data-phase="movement" onclick="setPhase('movement')">2. Movement</div>
+                    <div class="phase shooting" data-phase="shooting" onclick="setPhase('shooting')">3. Shooting</div>
+                    <div class="phase charge" data-phase="charge" onclick="setPhase('charge')">4. Charge</div>
+                    <div class="phase fight" data-phase="fight" onclick="setPhase('fight')">5. Fight</div>
+                    <div class="phase morale" data-phase="morale" onclick="setPhase('morale')">6. Morale</div>
+                </div>
+            </div>
+            
+            <div class="cp-display">
+                <div class="cp-circle" id="cpCount">1</div>
+                <div class="cp-label">Command Points</div>
+            </div>
+            
+            <h2>🏆 Score</h2>
+            <div class="score-section">
+                <div class="score-row">
+                    <span>Primary</span>
+                    <input type="number" class="score-input" id="primaryScore" value="0" max="20">
+                </div>
+                <div class="score-row">
+                    <span>Secondary 1</span>
+                    <input type="number" class="score-input" id="sec1Score" value="0">
+                </div>
+                <div class="score-row">
+                    <span>Secondary 2</span>
+                    <input type="number" class="score-input" id="sec2Score" value="0">
+                </div>
+                <div class="score-row">
+                    <span>Secondary 3</span>
+                    <input type="number" class="score-input" id="sec3Score" value="0">
+                </div>
+                <div class="score-row">
+                    <span>Total BP</span>
+                    <span id="totalBP">0</span>
+                </div>
+            </div>
+            
+            <h2>🎯 Objectives</h2>
+            <div class="objectives">
+                <div class="objective" data-obj="1" onclick="toggleObj(this)">No Prisoners</div>
+                <div class="objective" data-obj="2" onclick="toggleObj(this)">Purge the Wicked</div>
+                <div class="objective" data-obj="3" onclick="toggleObj(this)">Extend Battle Lines</div>
+                <div class="objective" data-obj="4" onclick="toggleObj(this)">Behind Enemy Lines</div>
+                <div class="objective" data-obj="5" onclick="toggleObj(this)">Engage on All Fronts</div>
+                <div class="objective" data-obj="6" onclick="toggleObj(this)">Area Denial</div>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn-small" onclick="nextPhase()">Next Phase ⏭️</button>
+                <button class="btn-small danger" onclick="resetGame()">Reset 🔄</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let gameState = {
+            round: 1,
+            turn: 1,
+            phase: 'command',
+            cp: 1,
+            army: [],
+            selectedUnit: null
+        };
+        
+        // Default WTC Army
+        const defaultUnits = [
+            { name: 'Trajann Valoris', pts: 145, models: 1, ws: 2, bs: 2, s: 6, t: 6, w: 6, ld: 6, sv: 2, weapons: 'Witchsword (S+2, AP-3, D3)' },
+            { name: 'Custodian Guard', pts: 45, models: 3, ws: 3, bs: 3, s: 5, t: 5, w: 3, ld: 6, sv: 3, weapons: 'Guardian Spear (S+1, AP-2, 2)' },
+            { name: 'Allarus Custodian', pts: 65, models: 1, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 2, weapons: 'Balistus Grenade (4, S8, AP-2, D3)' },
+            { name: 'Witchseekers', pts: 50, models: 3, ws: 3, bs: 3, s: 5, t: 4, w: 2, ld: 6, sv: 5, weapons: 'Ranging Laser (18", S5, AP-1, 1)' },
+            { name: 'Vertus Praetors', pts: 75, models: 2, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 2, weapons: 'Hurricane Bolter (24", S4, AP-1, 1)' }
+        ];
+        
+        // Initialize
+        function init() {
+            loadArmy();
+            drawBoard();
+            updateUI();
+            loadGameState();
+        }
+        
+        // Army Functions
+        function loadArmy() {
+            const saved = localStorage.getItem('wh40k_army');
+            if (saved) {
+                gameState.army = JSON.parse(saved);
+            } else {
+                gameState.army = [...defaultUnits];
+            }
+            renderArmy();
+        }
+        
+        function saveArmy() {
+            localStorage.setItem('wh40k_army', JSON.stringify(gameState.army));
+            alert('Army saved!');
+        }
+        
+        function clearArmy() {
+            if (confirm('Clear army list?')) {
+                gameState.army = [];
+                localStorage.removeItem('wh40k_army');
+                renderArmy();
+            }
+        }
+        
+        function addUnit() {
+            const name = document.getElementById('unitName').value;
+            if (!name) return;
+            
+            gameState.army.push({
+                name: name,
+                pts: 0,
+                models: 1,
+                ws: 4,
+                bs: 4,
+                s: 4,
+                t: 4,
+                w: 1,
+                ld: 7,
+                sv: 4,
+                weapons: '-'
+            });
+            
+            document.getElementById('unitName').value = '';
+            renderArmy();
+            saveArmy();
+        }
+        
+        function renderArmy() {
+            const list = document.getElementById('armyList');
+            list.innerHTML = '';
+            
+            let total = 0;
+            
+            gameState.army.forEach((unit, idx) => {
+                total += unit.pts;
+                const card = document.createElement('div');
+                card.className = 'unit-card' + (gameState.selectedUnit === idx ? ' selected' : '');
+                card.onclick = () => selectUnit(idx);
+                card.innerHTML = `
+                    <div class="unit-name">${unit.name} <span style="color:var(--gold)">(${unit.pts}pts)</span></div>
+                    <div class="unit-stats">M${unit.models} | WS${unit.ws} | BS${unit.bs} | S${unit.s} T${unit.t} W${unit.w} LD${unit.ld} SV${unit.sv}</div>
+                    <div class="unit-weapons">${unit.weapons}</div>
+                `;
+                list.appendChild(card);
+            });
+            
+            document.getElementById('totalPoints').textContent = total;
+        }
+        
+        function selectUnit(idx) {
+            gameState.selectedUnit = gameState.selectedUnit === idx ? null : idx;
+            renderArmy();
+        }
+        
+        // Dice Roller
+        function rollDice() {
+            const rollType = document.getElementById('rollType').value;
+            const target = parseInt(document.getElementById('targetNum').value);
+            const mod = parseInt(document.getElementById('rollMod').value);
+            const reroll = document.getElementById('reroll').value;
+            
+            let roll = Math.floor(Math.random() * 6) + 1;
+            let displayRoll = roll;
+            
+            // Apply modifier
+            const modified = roll + mod;
+            
+            // Handle rerolls
+            if (reroll === '1s' && roll === 1) {
+                roll = Math.floor(Math.random() * 6) + 1;
+                displayRoll = roll + '→' + roll;
+            } else if (reroll === 'failed' && (modified < target)) {
+                const newRoll = Math.floor(Math.random() * 6) + 1;
+                displayRoll = roll + '→' + newRoll;
+                roll = newRoll;
+            }
+            
+            const final = roll + mod;
+            const success = final >= target;
+            
+            const result = document.getElementById('diceResult');
+            result.textContent = final + (mod !== 0 ? (mod > 0 ? '+' + mod : mod) : '');
+            result.className = 'dice-result ' + (success ? 'success' : 'fail');
+            
+            // WTC specific text
+            let rollName = '';
+            switch(rollType) {
+                case 'hit': rollName = 'Hit'; break;
+                case 'wound': rollName = 'Wound'; break;
+                case 'save': rollName = 'Save'; break;
+                case 'morale': rollName = 'Morale'; break;
+            }
+            
+            document.getElementById('lastRoll').textContent = 
+                `${rollName}: ${displayRoll} → ${final} vs ${target}+ ${success ? '✅' : '❌'}`;
+        }
+        
+        // Phase Management
+        function setPhase(phase) {
+            gameState.phase = phase;
+            
+            document.querySelectorAll('.phase').forEach(p => {
+                p.classList.remove('active');
+                if (p.dataset.phase === phase) {
+                    p.classList.add('active');
+                }
+            });
+            
+            saveGameState();
+        }
+        
+        function nextPhase() {
+            const phases = ['command', 'movement', 'shooting', 'charge', 'fight', 'morale'];
+            const idx = phases.indexOf(gameState.phase);
+            
+            if (idx < phases.length - 1) {
+                setPhase(phases[idx + 1]);
+            } else {
+                // End of turn
+                setPhase('command');
+                gameState.turn++;
+                document.getElementById('turnNum').textContent = gameState.turn;
+                document.getElementById('boardTurn').textContent = 'Turn ' + gameState.turn;
+                
+                if (gameState.turn > 2) {
+                    gameState.turn = 1;
+                    gameState.round++;
+                    if (gameState.round > 5) {
+                        gameState.round = 5;
+                        alert('Game Over!');
+                    }
+                    document.getElementById('roundNum').textContent = gameState.round;
+                }
+                
+                // CP gain at start of round
+                if (gameState.turn === 1) {
+                    gameState.cp = Math.min(gameState.cp + 1, 4);
+                    updateCP();
+                }
+            }
+            saveGameState();
+        }
+        
+        function updateCP() {
+            document.getElementById('cpCount').textContent = gameState.cp;
+        }
+        
+        // Score
+        function updateScore() {
+            const primary = parseInt(document.getElementById('primaryScore').value) || 0;
+            const sec1 = parseInt(document.getElementById('sec1Score').value) || 0;
+            const sec2 = parseInt(document.getElementById('sec2Score').value) || 0;
+            const sec3 = parseInt(document.getElementById('sec3Score').value) || 0;
+            
+            const total = primary + sec1 + sec2 + sec3;
+            document.getElementById('totalBP').textContent = total;
+        }
+        
+        document.querySelectorAll('.score-input').forEach(input => {
+            input.addEventListener('change', updateScore);
+        });
+        
+        // Objectives
+        function toggleObj(el) {
+            el.classList.toggle('selected');
+            el.classList.toggle('complete');
+        }
+        
+        // Game State
+        function saveGameState() {
+            const state = {
+                round: gameState.round,
+                turn: gameState.turn,
+                phase: gameState.phase,
+                cp: gameState.cp
+            };
+            localStorage.setItem('wh40k_game', JSON.stringify(state));
+        }
+        
+        function loadGameState() {
+            const saved = localStorage.getItem('wh40k_game');
+            if (saved) {
+                const state = JSON.parse(saved);
+                gameState.round = state.round;
+                gameState.turn = state.turn;
+                gameState.phase = state.phase;
+                gameState.cp = state.cp;
+                
+                document.getElementById('roundNum').textContent = gameState.round;
+                document.getElementById('turnNum').textContent = gameState.turn;
+                document.getElementById('cpCount').textContent = gameState.cp;
+                setPhase(gameState.phase);
+            }
+        }
+        
+        function resetGame() {
+            if (confirm('Reset entire game?')) {
+                gameState = { round: 1, turn: 1, phase: 'command', cp: 1, army: gameState.army, selectedUnit: null };
+                localStorage.removeItem('wh40k_game');
+                updateUI();
+            }
+        }
+        
+        function updateUI() {
+            document.getElementById('roundNum').textContent = gameState.round;
+            document.getElementById('turnNum').textContent = gameState.turn;
+            document.getElementById('cpCount').textContent = gameState.cp;
+            document.getElementById('boardTurn').textContent = 'Turn ' + gameState.turn;
+            setPhase(gameState.phase);
+        }
+        
+        // Canvas Board
+        function drawBoard() {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Background
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Grid
+            ctx.strokeStyle = '#2a2a2a';
+            ctx.lineWidth = 1;
+            
+            for (let x = 0; x < canvas.width; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            for (let y = 0; y < canvas.height; y += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // Deployment Zones
+            ctx.fillStyle = 'rgba(0, 100, 255, 0.1)';
+            ctx.fillRect(50, 50, 150, 100);
+            
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
+            ctx.fillRect(canvas.width - 200, canvas.height - 150, 150, 100);
+            
+            // Objectives (5 circles)
+            const objectives = [
+                { x: 150, y: 250 },
+                { x: 300, y: 100 },
+                { x: 300, y: 400 },
+                { x: 450, y: 250 },
+                { x: 300, y: 250 }
+            ];
+            
+            objectives.forEach((obj, i) => {
+                ctx.beginPath();
+                ctx.arc(obj.x, obj.y, 20, 0, Math.PI * 2);
+                ctx.fillStyle = i === 4 ? 'rgba(255, 215, 0, 0.3)' : 'rgba(255, 255, 255, 0.1)';
+                ctx.fill();
+                ctx.strokeStyle = i === 4 ? '#ffd700' : '#666';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.fillStyle = '#888';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(i + 1, obj.x, obj.y + 4);
+            });
+            
+            // Labels
+            ctx.fillStyle = '#444';
+            ctx.font = '10px Arial';
+            ctx.fillText('DEPLOYMENT', canvas.width / 2, 30);
+            ctx.fillText('NO MAN\'S LAND', canvas.width / 2, canvas.height / 2);
+            ctx.fillText('DEPLOYMENT', canvas.width / 2, canvas.height - 15);
+        }
+        
+        // Initialize
+        init();
+    </script>
+</body>
+</html>
