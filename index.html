@@ -229,6 +229,49 @@
             border-left-color: var(--success);
             background: #1d2d1d;
         }
+
+        /* Unit Movement Range */
+        .movement-info {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        .unit-card.on-board {
+            border-left-color: var(--phase-movement);
+            background: #1a2d2d;
+        }
+
+        /* Board Controls */
+        .board-controls {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            pointer-events: all;
+        }
+
+        .board-controls button {
+            background: rgba(0,0,0,0.8);
+            color: var(--text);
+            border: 1px solid #444;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+
+        .board-controls button:hover {
+            background: #333;
+            border-color: var(--gold);
+        }
+
+        .board-controls button.active {
+            background: var(--gold);
+            color: #000;
+        }
         
         .unit-name {
             font-weight: bold;
@@ -438,6 +481,12 @@
                     <span>⚔️ WTC 2025/26</span>
                     <span id="boardTurn">Turn 1</span>
                 </div>
+                <div class="board-controls">
+                    <button id="btnPlace" onclick="setBoardMode('place')">📍 Place Unit</button>
+                    <button id="btnMove" onclick="setBoardMode('move')">🏃 Move</button>
+                    <button id="btnRange" onclick="setBoardMode('range')">📏 Show Range</button>
+                    <button onclick="clearBoardUnits()">🗑️ Clear Board</button>
+                </div>
             </div>
             
             <div class="dice-section">
@@ -561,7 +610,9 @@
             phase: 'command',
             cp: 1,
             army: [],
-            selectedUnit: null
+            selectedUnit: null,
+            unitsOnBoard: [], // {unitIndex, x, y, moved}
+            boardMode: null // 'place', 'move', 'range'
         };
         
         // Default WTC Army
@@ -636,13 +687,15 @@
             
             gameState.army.forEach((unit, idx) => {
                 total += unit.pts;
+                const onBoard = gameState.unitsOnBoard.find(u => u.unitIndex === idx);
                 const card = document.createElement('div');
-                card.className = 'unit-card' + (gameState.selectedUnit === idx ? ' selected' : '');
+                card.className = 'unit-card' + (gameState.selectedUnit === idx ? ' selected' : '') + (onBoard ? ' on-board' : '');
                 card.onclick = () => selectUnit(idx);
                 card.innerHTML = `
-                    <div class="unit-name">${unit.name} <span style="color:var(--gold)">(${unit.pts}pts)</span></div>
+                    <div class="unit-name">${unit.name} <span style="color:var(--gold)">(${unit.pts}pts)</span>${onBoard ? ' 📍' : ''}</div>
                     <div class="unit-stats">M${unit.models} | WS${unit.ws} | BS${unit.bs} | S${unit.s} T${unit.t} W${unit.w} LD${unit.ld} SV${unit.sv}</div>
                     <div class="unit-weapons">${unit.weapons}</div>
+                    <div class="movement-info">${gameState.boardMode === 'range' && onBoard ? '📏 Click board to show 3" range' : (gameState.boardMode === 'move' && onBoard ? '🏃 Click to move (max 3")' : (gameState.boardMode === 'place' ? '📍 Click board to place' : ''))}</div>
                 `;
                 list.appendChild(card);
             });
@@ -653,6 +706,7 @@
         function selectUnit(idx) {
             gameState.selectedUnit = gameState.selectedUnit === idx ? null : idx;
             renderArmy();
+            drawBoard();
         }
         
         // Dice Roller
@@ -775,7 +829,8 @@
                 round: gameState.round,
                 turn: gameState.turn,
                 phase: gameState.phase,
-                cp: gameState.cp
+                cp: gameState.cp,
+                unitsOnBoard: gameState.unitsOnBoard
             };
             localStorage.setItem('wh40k_game', JSON.stringify(state));
         }
@@ -788,6 +843,7 @@
                 gameState.turn = state.turn;
                 gameState.phase = state.phase;
                 gameState.cp = state.cp;
+                gameState.unitsOnBoard = state.unitsOnBoard || [];
                 
                 document.getElementById('roundNum').textContent = gameState.round;
                 document.getElementById('turnNum').textContent = gameState.turn;
@@ -798,9 +854,10 @@
         
         function resetGame() {
             if (confirm('Reset entire game?')) {
-                gameState = { round: 1, turn: 1, phase: 'command', cp: 1, army: gameState.army, selectedUnit: null };
+                gameState = { round: 1, turn: 1, phase: 'command', cp: 1, army: gameState.army, selectedUnit: null, unitsOnBoard: [], boardMode: null };
                 localStorage.removeItem('wh40k_game');
                 updateUI();
+                drawBoard();
             }
         }
         
@@ -870,12 +927,126 @@
                 ctx.fillText(i + 1, obj.x, obj.y + 4);
             });
             
+            // Draw units on board
+            gameState.unitsOnBoard.forEach((u, idx) => {
+                const unit = gameState.army[u.unitIndex];
+                if (!unit) return;
+                
+                // Movement range circle (if in range mode or selected)
+                if (gameState.boardMode === 'range' || (gameState.selectedUnit !== null && gameState.unitsOnBoard.find(u => u.unitIndex === gameState.selectedUnit))) {
+                    const selectedOnBoard = gameState.unitsOnBoard.find(u => u.unitIndex === gameState.selectedUnit);
+                    if (selectedOnBoard) {
+                        ctx.beginPath();
+                        ctx.arc(selectedOnBoard.x, selectedOnBoard.y, 150, 0, Math.PI * 2); // 3" at 50px = 150px
+                        ctx.fillStyle = 'rgba(77, 171, 247, 0.15)';
+                        ctx.fill();
+                        ctx.strokeStyle = '#4dabf7';
+                        ctx.setLineDash([5, 5]);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
+                }
+                
+                // Unit circle
+                ctx.beginPath();
+                ctx.arc(u.x, u.y, 15, 0, Math.PI * 2);
+                ctx.fillStyle = u.moved ? '#666' : (idx === 0 ? '#4dabf7' : '#c9a227');
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Unit name
+                ctx.fillStyle = '#fff';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                const shortName = unit.name.split(' ')[0];
+                ctx.fillText(shortName, u.x, u.y - 20);
+                
+                // Wounds indicator
+                ctx.fillStyle = '#fff';
+                ctx.font = '9px Arial';
+                ctx.fillText(`W${unit.w}`, u.x, u.y + 4);
+            });
+            
             // Labels
             ctx.fillStyle = '#444';
             ctx.font = '10px Arial';
             ctx.fillText('DEPLOYMENT', canvas.width / 2, 30);
             ctx.fillText('NO MAN\'S LAND', canvas.width / 2, canvas.height / 2);
             ctx.fillText('DEPLOYMENT', canvas.width / 2, canvas.height - 15);
+        }
+        
+        // Board Mode
+        function setBoardMode(mode) {
+            gameState.boardMode = gameState.boardMode === mode ? null : mode;
+            
+            document.querySelectorAll('.board-controls button').forEach(btn => btn.classList.remove('active'));
+            if (gameState.boardMode) {
+                document.getElementById('btn' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
+            }
+            
+            if (gameState.selectedUnit === null && mode) {
+                alert('Select a unit from the army list first!');
+                gameState.boardMode = null;
+                return;
+            }
+            
+            drawBoard();
+        }
+        
+        // Canvas Click Handler
+        document.getElementById('gameCanvas').addEventListener('click', function(e) {
+            if (!gameState.boardMode || gameState.selectedUnit === null) return;
+            
+            const rect = this.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const existingIdx = gameState.unitsOnBoard.findIndex(u => u.unitIndex === gameState.selectedUnit);
+            
+            if (gameState.boardMode === 'place') {
+                if (existingIdx >= 0) {
+                    gameState.unitsOnBoard[existingIdx].x = x;
+                    gameState.unitsOnBoard[existingIdx].y = y;
+                } else {
+                    gameState.unitsOnBoard.push({
+                        unitIndex: gameState.selectedUnit,
+                        x: x,
+                        y: y,
+                        moved: false
+                    });
+                }
+                renderArmy();
+            } else if (gameState.boardMode === 'move' && existingIdx >= 0) {
+                // Simple 3" (150px) movement check
+                const unit = gameState.unitsOnBoard[existingIdx];
+                if (!unit.moved) {
+                    const dist = Math.sqrt(Math.pow(x - unit.x, 2) + Math.pow(y - unit.y, 2));
+                    if (dist <= 150) {
+                        unit.x = x;
+                        unit.y = y;
+                        unit.moved = true;
+                    } else {
+                        alert('Too far! Max 3" movement.');
+                    }
+                } else {
+                    alert('Unit already moved this turn!');
+                }
+            }
+            
+            drawBoard();
+            saveGameState();
+        });
+        
+        // Clear board units
+        function clearBoardUnits() {
+            if (confirm('Remove all units from board?')) {
+                gameState.unitsOnBoard = [];
+                renderArmy();
+                drawBoard();
+                saveGameState();
+            }
         }
         
         // Initialize
