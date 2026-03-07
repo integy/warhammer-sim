@@ -1402,6 +1402,7 @@
             cp: 1,
             army: [],
             selectedUnit: null,
+            selectedWeaponIdx: null,
             unitsOnBoard: [], // {unitIndex, x, y, moved, wounds, battleShock}
             boardMode: null // 'place', 'move', 'range'
         };
@@ -1538,6 +1539,48 @@
             'Hurricane Bolter': { range: '24"', s: 'S4', ap: '-1', d: '1', abilities: 'Rapid Fire 3' },
             'Twin Iliastrus': { range: '24"', s: 'S8', ap: '-2', d: 'D6', abilities: 'Twin Linked' },
             'Arachnus Blaze Cannon': { range: '24"', s: 'S9', ap: '-2', d: 'D6', abilities: 'Hazardous, Ignores Cover' }
+        };
+
+        // Extended weapon profiles for all armies
+        const weaponDatabase = {
+            // Space Marines
+            'Bolt Rifle': { range: '24"', s: 'S4', ap: '-1', d: '1', abilities: 'Rapid Fire 1' },
+            'Boltgun': { range: '12"', s: 'S4', ap: '0', d: '1', abilities: '' },
+            'Heavy Bolt Rifle': { range: '36"', s: 'S5', ap: '-1', d: '2', abilities: 'Heavy' },
+            'Plasma Rifle': { range: '24"', s: 'S7', ap: '-2', d: '2', abilities: 'Plasma (Hot)' },
+            'Plasma Cannon': { range: '36"', s: 'S8', ap: '-3', d: 'D3', abilities: 'Blast, Plasma (Hot)' },
+            'Lascannon': { range: '48"', s: 'S12', ap: '-4', d: 'D6', abilities: 'Heavy' },
+            'Missile Launcher': { range: '48"', s: 'S8', ap: '-2', d: 'D6', abilities: 'Blast, Heavy' },
+            'Multi-melta': { range: '24"', s: 'S8', ap: '-4', d: 'D6', abilities: 'Melta' },
+            'Power Fist': { range: 'Melee', s: 'S+2', ap: '-3', d: '2', abilities: '' },
+            'Power Mauler': { range: 'Melee', s: 'S+1', ap: '-2', d: '2', abilities: 'Devastating Wounds' },
+            'Lightning Claw': { range: 'Melee', s: 'S+1', ap: '-2', d: '1', abilities: 'Reroll charges' },
+            'Thunder Hammer': { range: 'Melee', s: 'S+2', ap: '-3', d: '3', abilities: 'Stun' },
+            'Chainsword': { range: 'Melee', s: 'S+1', ap: '-1', d: '1', abilities: '' },
+            // Orks
+            'Shoota': { range: '18"', s: 'S4', ap: '0', d: '1', abilities: 'Assault' },
+            'Big Shoota': { range: '24"', s: 'S5', ap: '-1', d: '2', abilities: 'Assault' },
+            'Tankbusta Bomb': { range: '8"', s: 'S8', ap: '-3', d: 'D3', abilities: 'Melta' },
+            'Kustom Mega-Blasta': { range: '24"', s: 'S6', ap: '-2', d: 'D3', abilities: 'Melta' },
+            'Rokkit Launcha': { range: '36"', s: 'S8', ap: '-3', d: 'D3', abilities: 'Blast' },
+            'Power Klaw': { range: 'Melee', s: 'S+2', ap: '-3', d: 'D3', abilities: '' },
+            // Tyranids
+            'Stranglehold': { range: '18"', s: 'S6', ap: '-2', d: '2', abilities: 'Reroll wounds' },
+            'Spine Cannon': { range: '36"', s: 'S7', ap: '-1', d: '2', abilities: 'Blast' },
+            'Venom Cannon': { range: '36"', s: 'S9', ap: '-3', d: 'D6', abilities: 'Blast' },
+            'Devourer': { range: '12"', s: 'S5', ap: '-1', d: '1', abilities: 'Sustained Hits 1' },
+            'Bio-cannon': { range: '48"', s: 'S10', ap: '-3', d: 'D6', abilities: 'Blast, Indirect' },
+            // Death Guard
+            'Plague Spewer': { range: '12"', s: 'S6', ap: '-2', d: '2', abilities: 'Ignores Cover' },
+            'Blight Launcher': { range: '24"', s: 'S7', ap: '-2', d: 'D3', abilities: 'Blast' },
+            'Plague Reaper': { range: 'Melee', s: 'S+1', ap: '-2', d: '2', abilities: 'TUS' },
+            // Tau
+            'Pulse Rifle': { range: '20"', s: 'S5', ap: '-1', d: '1', abilities: 'Rapid Fire 1' },
+            'Pulse Carbine': { range: '15"', s: 'S5', ap: '-1', d: '1', abilities: 'Assault' },
+            'Fusion Blaster': { range: '18"', s: 'S8', ap: '-4', d: 'D6', abilities: 'Melta' },
+            'Cyclic Ion Blaster': { range: '24"', s: 'S7', ap: '-2', d: '2', abilities: 'Sustained Hits 1' },
+            'Rail Rifle': { range: '36"', s: 'S10', ap: '-4', d: 'D6+1', abilities: 'Sniper' },
+            'Smart Missile System': { range: '18"', s: 'S5', ap: '0', d: '1', abilities: 'Ignore Cover' }
         };
 
         // WTC Missions
@@ -2115,13 +2158,15 @@
             return weapons;
         }
 
-        let selectedWeaponIdx = null;
-
         function selectWeapon(idx) {
-            selectedWeaponIdx = idx;
+            gameState.selectedWeaponIdx = idx;
             document.querySelectorAll('.weapon-item').forEach((item, i) => {
                 item.classList.toggle('selected', i === idx);
             });
+            // Redraw board to show weapon range
+            if (gameState.selectedUnit !== null) {
+                drawBoard();
+            }
         }
 
         function rollAttack(weaponIdx) {
@@ -2940,26 +2985,56 @@
                             ctx.stroke();
                         }
                         
-                        // Shooting range - if weapon selected
-                        if (gameState.boardMode === 'range' && gameState.selectedWeapon) {
-                            const weapon = gameState.army[selectedOnBoard.unitIndex].weapons;
-                            // Parse range from weapon (simple check for 12", 18", 24", etc)
-                            const rangeMatch = weapon.match(/(\d+)"/);
-                            if (rangeMatch) {
-                                const rangePx = parseInt(rangeMatch[1]) * 50;
-                                ctx.beginPath();
-                                ctx.arc(selectedOnBoard.x, selectedOnBoard.y, rangePx, 0, Math.PI * 2);
-                                ctx.fillStyle = 'rgba(247, 103, 7, 0.1)';
-                                ctx.fill();
-                                ctx.strokeStyle = '#f76707';
-                                ctx.setLineDash([3, 3]);
-                                ctx.stroke();
-                                ctx.setLineDash([]);
-                                
-                                ctx.fillStyle = 'rgba(247, 103, 7, 0.8)';
-                                ctx.font = '10px Arial';
-                                ctx.textAlign = 'left';
-                                ctx.fillText(`RANGE: ${rangeMatch[1]}"`, selectedOnBoard.x + rangePx + 3, selectedOnBoard.y);
+                        // Weapon range - if weapon is selected
+                        if (gameState.boardMode === 'range' && gameState.selectedWeaponIdx !== null) {
+                            const unit = gameState.army[selectedOnBoard.unitIndex];
+                            const weapons = parseWeapons(unit.weapons);
+                            const weapon = weapons[gameState.selectedWeaponIdx];
+                            if (weapon) {
+                                // Check if melee or ranged (range 0 = Melee)
+                                if (weapon.range === 0 || weapon.range === 'Melee' || weapon.range === 'melee') {
+                                    // Show melee reach (2" = 100px)
+                                    ctx.beginPath();
+                                    ctx.arc(selectedOnBoard.x, selectedOnBoard.y, 100, 0, Math.PI * 2);
+                                    ctx.fillStyle = 'rgba(224, 49, 49, 0.15)';
+                                    ctx.fill();
+                                    ctx.strokeStyle = '#e03131';
+                                    ctx.setLineDash([5, 5]);
+                                    ctx.lineWidth = 2;
+                                    ctx.stroke();
+                                    ctx.setLineDash([]);
+                                    
+                                    ctx.fillStyle = 'rgba(224, 49, 49, 0.9)';
+                                    ctx.font = 'bold 10px Arial';
+                                    ctx.textAlign = 'center';
+                                    ctx.fillText('⚔️ MELEE: 2"', selectedOnBoard.x, selectedOnBoard.y - 115);
+                                } else {
+                                    // Ranged weapon - range is a number (inches)
+                                    const rangeInches = weapon.range;
+                                    if (rangeInches > 0) {
+                                        const rangePx = rangeInches * 50;
+                                        ctx.beginPath();
+                                        ctx.arc(selectedOnBoard.x, selectedOnBoard.y, rangePx, 0, Math.PI * 2);
+                                        ctx.fillStyle = 'rgba(247, 103, 7, 0.12)';
+                                        ctx.fill();
+                                        ctx.strokeStyle = '#f76707';
+                                        ctx.setLineDash([5, 5]);
+                                        ctx.lineWidth = 2;
+                                        ctx.stroke();
+                                        ctx.setLineDash([]);
+                                        
+                                        // Weapon name and range
+                                        ctx.fillStyle = 'rgba(247, 103, 7, 0.9)';
+                                        ctx.font = 'bold 10px Arial';
+                                        ctx.textAlign = 'center';
+                                        ctx.fillText(`🔫 ${weapon.name}: ${rangeInches}"`, selectedOnBoard.x, selectedOnBoard.y - rangePx - 5);
+                                        
+                                        // Weapon stats
+                                        ctx.fillStyle = 'rgba(247, 103, 7, 0.7)';
+                                        ctx.font = '8px Arial';
+                                        ctx.fillText(`S${weapon.s} AP${weapon.ap} D${weapon.d}`, selectedOnBoard.x, selectedOnBoard.y - rangePx + 10);
+                                    }
+                                }
                             }
                         }
                         
