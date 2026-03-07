@@ -1336,6 +1336,25 @@
                     • Teleport: Anywhere except 9" from enemy
                 </div>
             </div>
+            
+            <!-- Weapon Reference Panel -->
+            <div class="deep-strike-panel" style="margin-top: 15px; border-left-color: var(--phase-shooting);">
+                <h4>⚔️ Weapon Reference</h4>
+                <div id="weaponRefList" style="max-height: 200px; overflow-y: auto;">
+                    <div style="font-size: 0.7rem; color: var(--text-dim);">
+                        <table style="width:100%; border-collapse: collapse; font-size: 0.65rem;">
+                            <tr style="color: var(--gold);">
+                                <th style="text-align:left; padding:3px;">Weapon</th>
+                                <th style="text-align:center; padding:3px;">Range</th>
+                                <th style="text-align:center; padding:3px;">S</th>
+                                <th style="text-align:center; padding:3px;">AP</th>
+                                <th style="text-align:center; padding:3px;">D</th>
+                            </tr>
+                            <tr><td colspan="5" style="padding:5px; color:#666; font-style:italic;">Click unit to see weapons</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1818,6 +1837,38 @@
             renderArmy();
             drawBoard();
             updateWeaponPanel();
+            updateWeaponRef();
+        }
+        
+        // Update Weapon Reference Panel
+        function updateWeaponRef() {
+            const refList = document.getElementById('weaponRefList');
+            if (!refList) return;
+            
+            if (gameState.selectedUnit === null || !gameState.army[gameState.selectedUnit]) {
+                refList.innerHTML = '<div style="font-size: 0.7rem; color: var(--text-dim);"><table style="width:100%; border-collapse: collapse; font-size: 0.65rem;"><tr style="color: var(--gold);"><th style="text-align:left; padding:3px;">Weapon</th><th style="text-align:center; padding:3px;">Range</th><th style="text-align:center; padding:3px;">S</th><th style="text-align:center; padding:3px;">AP</th><th style="text-align:center; padding:3px;">D</th></tr><tr><td colspan="5" style="padding:5px; color:#666; font-style:italic;">Click unit to see weapons</td></tr></table></div>';
+                return;
+            }
+            
+            const unit = gameState.army[gameState.selectedUnit];
+            const weapons = parseWeapons(unit.weapons);
+            
+            let html = '<table style="width:100%; border-collapse: collapse; font-size: 0.65rem;">';
+            html += '<tr style="color: var(--gold);"><th style="text-align:left; padding:3px;">Weapon</th><th style="text-align:center; padding:3px;">Range</th><th style="text-align:center; padding:3px;">S</th><th style="text-align:center; padding:3px;">AP</th><th style="text-align:center; padding:3px;">D</th></tr>';
+            
+            weapons.forEach(w => {
+                const rangeStr = w.range === 0 ? 'Melee' : w.range + '"';
+                const sStr = typeof w.s === 'string' ? w.s : (w.s === 0 ? 'User' : w.s);
+                html += `<tr style="border-bottom:1px solid #333;">
+                    <td style="padding:3px; color:var(--text);">${w.name}</td>
+                    <td style="text-align:center; padding:3px; color:#888;">${rangeStr}</td>
+                    <td style="text-align:center; padding:3px; color:var(--success);">${sStr}</td>
+                    <td style="text-align:center; padding:3px; color:var(--danger);">${w.ap}</td>
+                    <td style="text-align:center; padding:3px; color:var(--gold);">${w.d}</td>
+                </tr>`;
+            });
+            html += '</table>';
+            refList.innerHTML = html;
         }
 
         // Weapon Panel
