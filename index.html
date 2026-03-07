@@ -562,6 +562,61 @@
         .attack-step.wound { color: var(--danger); }
         .attack-step.save { color: var(--success); }
         .attack-step.damage { color: var(--gold); font-weight: bold; }
+
+        /* Morale Panel */
+        .morale-panel {
+            margin-top: 15px;
+            padding: 10px;
+            background: #252525;
+            border-radius: 4px;
+            border-left: 3px solid var(--phase-morale);
+        }
+
+        .morale-panel h4 {
+            font-size: 0.8rem;
+            color: var(--phase-morale);
+            margin-bottom: 8px;
+        }
+
+        .morale-btn {
+            background: var(--phase-morale);
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            margin-top: 8px;
+            width: 100%;
+        }
+
+        .morale-btn:hover {
+            opacity: 0.9;
+        }
+
+        .morale-result {
+            margin-top: 8px;
+            padding: 8px;
+            background: #1a1a1a;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            text-align: center;
+        }
+
+        .morale-result.passed { color: var(--success); }
+        .morale-result.failed { color: var(--danger); }
+
+        /* Weapon Range Indicator */
+        .weapon-range {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.65rem;
+            margin-left: 5px;
+        }
+
+        .weapon-range.melee { background: var(--phase-charge); color: #fff; }
+        .weapon-range.ranged { background: var(--phase-shooting); color: #000; }
     </style>
 </head>
 <body>
@@ -621,6 +676,23 @@
                     <div class="attack-step wound" id="woundResult">Wounds: -</div>
                     <div class="attack-step save" id="saveResult">Saves Failed: -</div>
                     <div class="attack-step damage" id="damageResult">Damage Dealt: -</div>
+                </div>
+
+                <!-- Morale Panel -->
+                <div class="morale-panel" id="moralePanel" style="display: none;">
+                    <h4>🧠 Morale Test</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                        <div>
+                            <label style="font-size: 0.65rem; color: var(--text-dim);">Leadership</label>
+                            <input type="number" id="moraleLd" value="6" min="1" max="10" style="width: 100%; background: #333; color: var(--text); border: 1px solid #444; padding: 4px; border-radius: 3px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.65rem; color: var(--text-dim);">Modifier</label>
+                            <input type="number" id="moraleMod" value="0" min="-3" max="3" style="width: 100%; background: #333; color: var(--text); border: 1px solid #444; padding: 4px; border-radius: 3px;">
+                        </div>
+                    </div>
+                    <button class="morale-btn" onclick="rollMoraleTest()">🎲 Roll Morale Test</button>
+                    <div class="morale-result" id="moraleResult">Select a unit to test</div>
                 </div>
             </div>
         </div>
@@ -960,6 +1032,7 @@
         function updateWeaponPanel() {
             const panel = document.getElementById('weaponPanel');
             const list = document.getElementById('weaponList');
+            const moralePanel = document.getElementById('moralePanel');
             
             if (gameState.selectedUnit === null || !gameState.army[gameState.selectedUnit]) {
                 panel.style.display = 'none';
@@ -967,6 +1040,7 @@
             }
             
             panel.style.display = 'block';
+            moralePanel.style.display = 'block';
             list.innerHTML = '';
             
             const unit = gameState.army[gameState.selectedUnit];
@@ -978,12 +1052,13 @@
             }
             
             weapons.forEach((weapon, idx) => {
+                const isMelee = weapon.range === 0;
                 const item = document.createElement('div');
                 item.className = 'weapon-item';
                 item.onclick = () => selectWeapon(idx);
                 item.innerHTML = `
-                    <div class="weapon-name">${weapon.name}</div>
-                    <div class="weapon-stats">${weapon.range}" | S${weapon.s} | AP${weapon.ap} | D${weapon.d}</div>
+                    <div class="weapon-name">${weapon.name} <span class="weapon-range ${isMelee ? 'melee' : 'ranged'}">${isMelee ? 'Melee' : weapon.range + '"'}</span></div>
+                    <div class="weapon-stats">S${weapon.s} | AP${weapon.ap} | D${weapon.d}</div>
                     <button class="attack-btn" onclick="event.stopPropagation(); rollAttack(${idx})">⚔️ Attack</button>
                 `;
                 list.appendChild(item);
@@ -1128,6 +1203,53 @@
             document.getElementById('woundResult').textContent = `Wounds: ${wounds}/${hits} [${woundRolls.join(', ')}]`;
             document.getElementById('saveResult').textContent = `Saves Failed: ${savesFailed}/${wounds} (AP${weapon.ap}, need ${modifiedSv}+) [${saveRolls.join(', ')}]`;
             document.getElementById('damageResult').textContent = `💥 Damage: ${savesFailed} × D${weapon.d} = ${damage}`;
+        }
+        
+        // Morale Test Function (WTC 10th Edition)
+        function rollMoraleTest() {
+            if (gameState.selectedUnit === null) return;
+            
+            const unit = gameState.army[gameState.selectedUnit];
+            const ld = parseInt(document.getElementById('moraleLd').value) || unit.ld;
+            const mod = parseInt(document.getElementById('moraleMod').value) || 0;
+            const models = unit.models || 1;
+            
+            // Roll test
+            const roll = Math.floor(Math.random() * 6) + 1;
+            const modified = roll + mod;
+            
+            // Check if failed (over leadership)
+            const failed = modified > ld;
+            
+            // Calculate models to remove if failed
+            let modelsLost = 0;
+            if (failed) {
+                // Number of failed models = amount over LD (minimum 1)
+                modelsLost = Math.max(1, modified - ld);
+                // Can't lose more than models in unit
+                modelsLost = Math.min(modelsLost, models);
+            }
+            
+            // Display result
+            const result = document.getElementById('moraleResult');
+            if (failed) {
+                result.className = 'morale-result failed';
+                result.innerHTML = `
+                    <strong>❌ FAILED!</strong><br>
+                    Roll: ${roll} + ${mod} = ${modified} > LD${ld}<br>
+                    <strong>Lost ${modelsLost} model${modelsLost > 1 ? 's' : ''}</strong>
+                `;
+            } else {
+                result.className = 'morale-result passed';
+                result.innerHTML = `
+                    <strong>✅ PASSED!</strong><br>
+                    Roll: ${roll} + ${mod} = ${modified} ≤ LD${ld}<br>
+                    No models lost
+                `;
+            }
+            
+            // Auto-update morale panel with unit's leadership
+            document.getElementById('moraleLd').value = unit.ld;
         }
         
         // Dice Roller
