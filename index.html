@@ -520,6 +520,10 @@
                         </select>
                     </div>
                     <div>
+                        <label># Dice</label>
+                        <input type="number" id="numDice" value="1" min="1" max="20">
+                    </div>
+                    <div>
                         <label>Target</label>
                         <input type="number" id="targetNum" value="3" min="2" max="6">
                     </div>
@@ -791,32 +795,51 @@
         // Dice Roller
         function rollDice() {
             const rollType = document.getElementById('rollType').value;
+            const numDice = parseInt(document.getElementById('numDice').value) || 1;
             const target = parseInt(document.getElementById('targetNum').value);
             const mod = parseInt(document.getElementById('rollMod').value);
             const reroll = document.getElementById('reroll').value;
             
-            let roll = Math.floor(Math.random() * 6) + 1;
-            let displayRoll = roll;
+            const rolls = [];
+            let rerollCount = 0;
             
-            // Apply modifier
-            const modified = roll + mod;
-            
-            // Handle rerolls
-            if (reroll === '1s' && roll === 1) {
-                roll = Math.floor(Math.random() * 6) + 1;
-                displayRoll = roll + '→' + roll;
-            } else if (reroll === 'failed' && (modified < target)) {
-                const newRoll = Math.floor(Math.random() * 6) + 1;
-                displayRoll = roll + '→' + newRoll;
-                roll = newRoll;
+            // Roll all dice
+            for (let i = 0; i < numDice; i++) {
+                let roll = Math.floor(Math.random() * 6) + 1;
+                let finalRoll = roll;
+                let display = roll.toString();
+                
+                // Handle rerolls
+                if (reroll === '1s' && roll === 1) {
+                    finalRoll = Math.floor(Math.random() * 6) + 1;
+                    display = roll + '→' + finalRoll;
+                    rerollCount++;
+                } else if (reroll === 'failed' && (roll + mod < target)) {
+                    finalRoll = Math.floor(Math.random() * 6) + 1;
+                    display = roll + '→' + finalRoll;
+                    rerollCount++;
+                }
+                
+                rolls.push({ original: roll, final: finalRoll, display: display });
             }
             
-            const final = roll + mod;
-            const success = final >= target;
+            // Calculate successes
+            const successes = rolls.filter(r => r.final + mod >= target).length;
+            const fails = numDice - successes;
             
             const result = document.getElementById('diceResult');
-            result.textContent = final + (mod !== 0 ? (mod > 0 ? '+' + mod : mod) : '');
-            result.className = 'dice-result ' + (success ? 'success' : 'fail');
+            
+            if (numDice === 1) {
+                // Single dice display
+                const r = rolls[0];
+                const final = r.final + mod;
+                result.textContent = final + (mod !== 0 ? (mod > 0 ? '+' + mod : mod) : '');
+                result.className = 'dice-result ' + (final >= target ? 'success' : 'fail');
+            } else {
+                // Multiple dice display
+                result.textContent = successes + ' ✅ / ' + numDice;
+                result.className = 'dice-result ' + (successes > 0 ? 'success' : 'fail');
+            }
             
             // WTC specific text
             let rollName = '';
@@ -827,8 +850,14 @@
                 case 'morale': rollName = 'Morale'; break;
             }
             
-            document.getElementById('lastRoll').textContent = 
-                `${rollName}: ${displayRoll} → ${final} vs ${target}+ ${success ? '✅' : '❌'}`;
+            // Build detail string
+            const diceDetails = rolls.map(r => r.display).join(', ');
+            let detail = `${rollName}: [${diceDetails}]`;
+            if (mod !== 0) detail += ` +${mod}`;
+            detail += ` → ${successes}/${numDice} ✅`;
+            if (rerollCount > 0) detail += ` (${rerollCount} rerolled)`;
+            
+            document.getElementById('lastRoll').textContent = detail;
         }
         
         // Phase Management
