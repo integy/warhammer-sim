@@ -736,6 +736,72 @@
 
         .weapon-range.melee { background: var(--phase-charge); color: #fff; }
         .weapon-range.ranged { background: var(--phase-shooting); color: #000; }
+
+        /* Fight Activation Panel */
+        .fight-activation {
+            margin-top: 15px;
+            padding: 10px;
+            background: #252525;
+            border-radius: 4px;
+            border-left: 3px solid var(--phase-fight);
+        }
+
+        .fight-activation h4 {
+            font-size: 0.8rem;
+            color: var(--phase-fight);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .fight-priority {
+            margin-bottom: 8px;
+        }
+
+        .fight-priority-label {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .fight-priority-label.fights-first { color: #ffd700; }
+        .fight-priority-label.fights-last { color: #c92a2a; }
+
+        .fight-unit {
+            padding: 4px 8px;
+            margin: 2px 0;
+            background: #1a1a1a;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .fight-unit:hover { background: #2d2d2d; }
+
+        .fight-unit.fights-first { border-left: 2px solid #ffd700; }
+        .fight-unit.fights-last { border-left: 2px solid #c92a2a; }
+
+        .fight-toggle {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            background: #333;
+            border: none;
+            color: var(--text);
+        }
+
+        .fight-toggle.fights-first { background: #ffd700; color: #000; }
+        .fight-toggle.fights-last { background: #c92a2a; color: #fff; }
+
+        .no-units { color: var(--text-dim); font-size: 0.7rem; font-style: italic; }
     </style>
 </head>
 <body>
@@ -833,6 +899,12 @@
                         -
                     </div>
                     <button class="btn-small" style="margin-top: 8px; width: 100%;" onclick="resetUnitWounds()">🔄 Reset Wounds</button>
+                </div>
+                
+                <!-- Fight Activation Panel -->
+                <div class="fight-activation" id="fightActivation" style="display: none;">
+                    <h4>⚔️ Fight Activation Order</h4>
+                    <div id="fightOrderList"></div>
                 </div>
             </div>
         </div>
@@ -1622,6 +1694,111 @@
             drawBoard();
             saveGameState();
         }
+
+        // Fight Activation Tracker (WTC 10th Ed)
+        function updateFightActivationPanel() {
+            const panel = document.getElementById('fightActivation');
+            const list = document.getElementById('fightOrderList');
+            
+            // Only show in Fight phase
+            if (gameState.phase !== 'fight') {
+                panel.style.display = 'none';
+                return;
+            }
+            
+            panel.style.display = 'block';
+            
+            // Get units on board
+            const unitsOnBoard = gameState.unitsOnBoard;
+            
+            if (unitsOnBoard.length === 0) {
+                list.innerHTML = '<div class="no-units">No units on board</div>';
+                return;
+            }
+            
+            // Categorize units by fight priority
+            const fightsFirst = [];
+            const regular = [];
+            const fightsLast = [];
+            
+            unitsOnBoard.forEach((u, idx) => {
+                const unit = gameState.army[u.unitIndex];
+                const priority = u.fightsLast ? 'last' : (unit.fightsFirst ? 'first' : 'regular');
+                
+                if (priority === 'first') fightsFirst.push({...u, unit, idx});
+                else if (priority === 'last') fightsLast.push({...u, unit, idx});
+                else regular.push({...u, unit, idx});
+            });
+            
+            let html = '';
+            
+            // Fights First
+            html += '<div class="fight-priority"><div class="fight-priority-label fights-first">⚡ Fights First</div>';
+            if (fightsFirst.length === 0) {
+                html += '<div class="no-units">None</div>';
+            } else {
+                fightsFirst.forEach(u => {
+                    html += `<div class="fight-unit fights-first" onclick="selectUnit(${u.unitIndex})">
+                        ${u.unit.name.split(' ')[0]}
+                        <button class="fight-toggle" onclick="event.stopPropagation(); toggleFightsLast(${u.idx})">Make Last</button>
+                    </div>`;
+                });
+            }
+            html += '</div>';
+            
+            // Regular
+            html += '<div class="fight-priority"><div class="fight-priority-label">⚔️ Regular</div>';
+            if (regular.length === 0) {
+                html += '<div class="no-units">None</div>';
+            } else {
+                regular.forEach(u => {
+                    html += `<div class="fight-unit" onclick="selectUnit(${u.unitIndex})">
+                        ${u.unit.name.split(' ')[0]}
+                        <span style="font-size:0.6rem;color:#666">
+                            <button class="fight-toggle fights-first" onclick="event.stopPropagation(); toggleFightsFirst(${u.idx})">First</button>
+                            <button class="fight-toggle fights-last" onclick="event.stopPropagation(); toggleFightsLast(${u.idx})">Last</button>
+                        </span>
+                    </div>`;
+                });
+            }
+            html += '</div>';
+            
+            // Fights Last
+            html += '<div class="fight-priority"><div class="fight-priority-label fights-last">⛔ Fights Last</div>';
+            if (fightsLast.length === 0) {
+                html += '<div class="no-units">None</div>';
+            } else {
+                fightsLast.forEach(u => {
+                    html += `<div class="fight-unit fights-last" onclick="selectUnit(${u.unitIndex})">
+                        ${u.unit.name.split(' ')[0]}
+                        <button class="fight-toggle" onclick="event.stopPropagation(); toggleFightsLast(${u.idx})">Remove</button>
+                    </div>`;
+                });
+            }
+            html += '</div>';
+            
+            list.innerHTML = html;
+        }
+        
+        function toggleFightsFirst(boardIndex) {
+            const onBoard = gameState.unitsOnBoard[boardIndex];
+            if (onBoard) {
+                onBoard.fightsLast = false;
+                updateFightActivationPanel();
+                drawBoard();
+                saveGameState();
+            }
+        }
+        
+        function toggleFightsLast(boardIndex) {
+            const onBoard = gameState.unitsOnBoard[boardIndex];
+            if (onBoard) {
+                onBoard.fightsLast = !onBoard.fightsLast;
+                updateFightActivationPanel();
+                drawBoard();
+                saveGameState();
+            }
+        }
         
         // Dice Roller
         function rollDice() {
@@ -1701,6 +1878,13 @@
                     p.classList.add('active');
                 }
             });
+            
+            // Update fight activation panel when entering fight phase
+            if (phase === 'fight') {
+                updateFightActivationPanel();
+            } else {
+                document.getElementById('fightActivation').style.display = 'none';
+            }
             
             saveGameState();
         }
@@ -1964,10 +2148,36 @@
                 ctx.fillStyle = fillColor;
                 ctx.fill();
                 
-                // Border
-                ctx.strokeStyle = u.battleShock ? '#862e9c' : '#fff';
-                ctx.lineWidth = u.battleShock ? 3 : 2;
+                // Border - show fight priority
+                let borderColor = '#fff';
+                let borderWidth = 2;
+                let indicator = '';
+                
+                if (u.battleShock) {
+                    borderColor = '#862e9c';
+                    borderWidth = 3;
+                }
+                if (u.fightsLast) {
+                    borderColor = '#c92a2a';
+                    borderWidth = 4;
+                    indicator = '⛔';
+                } else if (unit.fightsFirst) {
+                    borderColor = '#ffd700';
+                    borderWidth = 3;
+                    indicator = '⚡';
+                }
+                
+                ctx.strokeStyle = borderColor;
+                ctx.lineWidth = borderWidth;
                 ctx.stroke();
+                
+                // Fight priority indicator
+                if (indicator && gameState.phase === 'fight') {
+                    ctx.fillStyle = borderColor;
+                    ctx.font = '10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(indicator, u.x + 12, u.y - 12);
+                }
                 
                 // Unit name
                 ctx.fillStyle = '#fff';
