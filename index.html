@@ -454,6 +454,30 @@
             background: var(--gold-dim);
             color: #000;
         }
+
+        /* Mission Selector */
+        .mission-select {
+            margin-bottom: 15px;
+        }
+
+        .mission-select select {
+            width: 100%;
+            background: #333;
+            color: var(--text);
+            border: 1px solid #444;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .mission-info {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-top: 5px;
+            padding: 8px;
+            background: #252525;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -469,6 +493,21 @@
                 <button class="template-btn" onclick="loadTemplate('spacemarines')">⚔️ Space Marines</button>
                 <button class="template-btn" onclick="loadTemplate('darkangels')">🔱 Dark Angels</button>
                 <button class="template-btn" onclick="loadTemplate('orks')">🐗 Orks</button>
+            </div>
+
+            <div class="mission-select">
+                <label style="font-size: 0.75rem; color: var(--gold); display: block; margin-bottom: 5px;">🎯 WTC Mission</label>
+                <select id="wtcMission" onchange="changeMission()">
+                    <option value="capture">1. Capture & Control</option>
+                    <option value="purge">2. Purge the Flesh</option>
+                    <option value="maelstrom">3. Maelstrom</option>
+                    <option value="scorched">4. Scorched Earth</option>
+                    <option value="escalation">5. Escalation</option>
+                    <option value="annihilation">6. Total War</option>
+                </select>
+                <div class="mission-info" id="missionInfo">
+                    Primary: Control more objectives. Deploy: Short.
+                </div>
             </div>
             
             <div class="army-section">
@@ -645,6 +684,33 @@
             { name: 'Vertus Praetors', pts: 75, models: 2, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 2, weapons: 'Hurricane Bolter (24", S4, AP-1, 1)' }
         ];
 
+        // WTC Missions
+        const wtcMissions = {
+            capture: { name: 'Capture & Control', primary: 'Control objectives', deploy: 'Short', desc: 'Control more objectives than opponent' },
+            purge: { name: 'Purge the Flesh', primary: 'Kill enemy units', deploy: 'Short', desc: 'Score for destroying enemy models' },
+            maelstrom: { name: 'Maelstrom', primary: 'Tactical objectives', deploy: 'Short', desc: 'Complete tactical objectives each turn' },
+            scorched: { name: 'Scorched Earth', primary: 'Destroy objectives', deploy: 'Long', desc: 'Destroy no-man\'s land objectives' },
+            escalation: { name: 'Escalation', primary: 'Points escalate', deploy: 'Short', desc: 'Primary points increase each round' },
+            annihilation: { name: 'Total War', primary: 'Annihilation', deploy: 'Short', desc: 'Destroy enemy army for max points' }
+        };
+
+        function changeMission() {
+            const mission = document.getElementById('wtcMission').value;
+            const info = wtcMissions[mission];
+            document.getElementById('missionInfo').textContent = info.primary + '. Deploy: ' + info.deploy;
+            localStorage.setItem('wh40k_mission', mission);
+            drawBoard(); // Redraw to update objective display
+        }
+
+        // Load saved mission
+        function loadMission() {
+            const saved = localStorage.getItem('wh40k_mission');
+            if (saved && wtcMissions[saved]) {
+                document.getElementById('wtcMission').value = saved;
+                changeMission();
+            }
+        }
+
         // Army Templates (WTC Legal ~2000pts)
         const armyTemplates = {
             custodes: [
@@ -710,6 +776,7 @@
         // Initialize
         function init() {
             loadArmy();
+            loadMission();
             drawBoard();
             updateUI();
             loadGameState();
