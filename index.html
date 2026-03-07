@@ -802,6 +802,139 @@
         .fight-toggle.fights-last { background: #c92a2a; color: #fff; }
 
         .no-units { color: var(--text-dim); font-size: 0.7rem; font-style: italic; }
+
+        /* Enhancement Panel */
+        .enhancement-panel {
+            margin-top: 15px;
+            padding: 10px;
+            background: #252525;
+            border-radius: 4px;
+            border-left: 3px solid #9c27b0;
+        }
+
+        .enhancement-panel h4 {
+            font-size: 0.8rem;
+            color: #9c27b0;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .enhancement-list {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .enhancement-item {
+            background: #1a1a1a;
+            padding: 8px;
+            margin: 4px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            font-size: 0.75rem;
+        }
+
+        .enhancement-item:hover {
+            background: #2d2d2d;
+        }
+
+        .enhancement-item.selected {
+            border-color: #9c27b0;
+            background: #2d1a2d;
+        }
+
+        .enhancement-name {
+            font-weight: bold;
+            color: var(--gold);
+        }
+
+        .enhancement-effect {
+            color: var(--text-dim);
+            font-size: 0.7rem;
+            margin-top: 3px;
+        }
+
+        .enhancement-cost {
+            color: var(--success);
+            font-size: 0.7rem;
+            float: right;
+        }
+
+        .add-enhancement {
+            display: flex;
+            gap: 5px;
+            margin-top: 8px;
+        }
+
+        .add-enhancement input {
+            flex: 1;
+            background: #333;
+            color: var(--text);
+            border: 1px solid #444;
+            padding: 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
+        .enhancement-points {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #333;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+
+        .enhancement-points span {
+            color: #9c27b0;
+            font-weight: bold;
+        }
+
+        /* Stratagem Quick Reference */
+        .stratagem-panel {
+            margin-top: 15px;
+            padding: 10px;
+            background: #252525;
+            border-radius: 4px;
+            border-left: 3px solid var(--gold);
+        }
+
+        .stratagem-panel h4 {
+            font-size: 0.8rem;
+            color: var(--gold);
+            margin-bottom: 8px;
+        }
+
+        .stratagem-select {
+            width: 100%;
+            background: #333;
+            color: var(--text);
+            border: 1px solid #444;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-bottom: 8px;
+        }
+
+        .stratagem-info {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            background: #1a1a1a;
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        .stratagem-cost {
+            display: inline-block;
+            background: var(--gold);
+            color: #000;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.65rem;
+            font-weight: bold;
+            margin-right: 5px;
+        }
     </style>
 </head>
 <body>
@@ -853,6 +986,42 @@
             
             <div style="margin-top: 15px; font-size: 0.8rem; color: var(--text-dim);">
                 Total Points: <span id="totalPoints" style="color: var(--gold);">0</span>
+                <span id="enhancementPoints" style="margin-left: 10px; color: #9c27b0;"></span>
+            </div>
+
+            <!-- Enhancement Panel -->
+            <div class="enhancement-panel" id="enhancementPanel">
+                <h4>✨ WTC Enhancements (10th Ed)</h4>
+                <div class="enhancement-list" id="enhancementList"></div>
+                <div class="add-enhancement">
+                    <input type="text" id="enhancementName" placeholder="Enhancement name...">
+                    <input type="number" id="enhancementCost" placeholder="pts" style="width: 50px;">
+                    <button onclick="addEnhancement()" style="background: #9c27b0; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer;">+</button>
+                </div>
+                <div class="enhancement-points">
+                    Enhancement Points: <span id="enhancementTotal">0</span> / 100
+                </div>
+            </div>
+
+            <!-- Stratagem Quick Reference -->
+            <div class="stratagem-panel">
+                <h4>📜 Stratagem Reference</h4>
+                <select class="stratagem-select" id="stratagemSelect" onchange="showStratagem()">
+                    <option value="">-- Select Stratagem --</option>
+                    <option value="heroic">Heroic Intervention (1CP)</option>
+                    <option value="charge">Epic Challenge (1CP)</option>
+                    <option value="transhuman">Transhuman (1CP)</option>
+                    <option value="fireoverwatch">Fire Overwatch (1CP)</option>
+                    <option value="counter">Counter-offensive (2CP)</option>
+                    <option value="insane">Insane Bravery (2CP)</option>
+                    <option value="precision">Precision (1CP)</option>
+                    <option value="grenade">Granades (1CP)</option>
+                    <option value="linked">Linked (1CP)</option>
+                    <option value="assault">Assault (2CP)</option>
+                </select>
+                <div class="stratagem-info" id="stratagemInfo">
+                    Select a stratagem to see its effect
+                </div>
             </div>
 
             <!-- Weapon Panel -->
@@ -1106,6 +1275,191 @@
             annihilation: { name: 'Total War', primary: 'Annihilation', deploy: 'Short', desc: 'Destroy enemy army for max points' }
         };
 
+        // WTC Enhancements Database (10th Ed)
+        const enhancementDatabase = {
+            custodes: [
+                { name: 'Panoptis', cost: 20, effect: 'Unit gains 4+ invulnerable save' },
+                { name: 'Unstoppable Destroyer', cost: 25, effect: 'Reroll hit rolls of 1, +1 Strength' },
+                { name: 'Auric Armour', cost: 15, effect: 'Feel No Pain 5+' },
+                { name: 'Stride of the Emperor', cost: 30, effect: 'Deep Strike, +2" Move' }
+            ],
+            spacemarines: [
+                { name: 'Rites of War', cost: 25, effect: 'Enemy cannot set up in DZ' },
+                { name: 'Banner of the Eagle', cost: 30, effect: 'Combat Attrition tests -1' },
+                { name: ' Teeth of Terra', cost: 35, effect: 'Melee weapons +1 Strength, +1 AP' },
+                { name: 'Artificer\'s Armour', cost: 20, effect: '4+ invulnerable save' }
+            ],
+            darkangels: [
+                { name: 'Pennant of Remembrance', cost: 25, effect: 'Feel No Pain 5+ in Fight phase' },
+                { name: 'The Raven\'s Dark Sword', cost: 35, effect: '+2 Strength, Devastating Wounds' },
+                { name: 'Chapter Mastery', cost: 30, effect: 'Reroll hit rolls of 1 for aura' }
+            ],
+            orks: [
+                { name: 'Kunnin\'', cost: 20, effect: 'Infiltrate, 6+ invulnerable' },
+                { name: 'Headwoppa\'s Killchoppa', cost: 35, effect: 'S+2, AP-3, D3, Devastating Wounds' },
+                { name: 'Mek\'s Tools', cost: 15, effect: 'Heal D3 wounds at start of turn' }
+            ],
+            tyranids: [
+                { name: 'Synaptic Lynchpin', cost: 25, effect: 'Psychic tests +1' },
+                { name: 'Alien Cunning', cost: 20, effect: 'Deep Strike, -1 to be hit' },
+                { name: 'Instinctive Actor', cost: 15, effect: 'Fights First' }
+            ],
+            deathguard: [
+                { name: 'Putrescent Vitality', cost: 20, effect: 'Feel No Pain 6+' },
+                { name: 'Fugaris\'s Helm', cost: 30, effect: 'Enemy -1 Leadership aura' },
+                { name: 'Plague Skull', cost: 25, effect: 'Poisoned weapons (4+)' }
+            ],
+            tau: [
+                { name: 'Through Unity, Devastation', cost: 30, effect: 'Reroll wound rolls of 1' },
+                { name: 'Warlord Trait: EM', cost: 25, effect: '3+ invulnerable' },
+                { name: 'Onager Construct', cost: 20, effect: 'FNP 6+ vs ranged' }
+            ],
+            generic: [
+                { name: 'Relic', cost: 20, effect: '4+ invulnerable save' },
+                { name: 'Warlord', cost: 0, effect: '+3" Leadership aura' },
+                { name: 'Heroic', cost: 25, effect: 'Reroll hit rolls of 1' },
+                { name: 'Expert', cost: 30, effect: '+1 to Hit in melee' },
+                { name: 'Tenacious', cost: 35, effect: 'Feel No Pain 5+' }
+            ]
+        };
+
+        // Game State for enhancements
+        let enhancements = [];
+
+        function loadEnhancements() {
+            const saved = localStorage.getItem('wh40k_enhancements');
+            if (saved) {
+                enhancements = JSON.parse(saved);
+            }
+            renderEnhancements();
+        }
+
+        function saveEnhancements() {
+            localStorage.setItem('wh40k_enhancements', JSON.stringify(enhancements));
+            renderEnhancements();
+        }
+
+        function addEnhancement() {
+            const name = document.getElementById('enhancementName').value;
+            const cost = parseInt(document.getElementById('enhancementCost').value) || 0;
+
+            if (!name) return;
+
+            enhancements.push({ name, cost });
+            document.getElementById('enhancementName').value = '';
+            document.getElementById('enhancementCost').value = '';
+            saveEnhancements();
+        }
+
+        function removeEnhancement(idx) {
+            enhancements.splice(idx, 1);
+            saveEnhancements();
+        }
+
+        function renderEnhancements() {
+            const list = document.getElementById('enhancementList');
+            list.innerHTML = '';
+
+            let total = 0;
+            enhancements.forEach((enh, idx) => {
+                total += enh.cost;
+                const item = document.createElement('div');
+                item.className = 'enhancement-item';
+                item.innerHTML = `
+                    <span class="enhancement-cost">${enh.cost}pts</span>
+                    <span class="enhancement-name">${enh.name}</span>
+                    <div class="enhancement-effect">${enh.effect}</div>
+                `;
+                item.onclick = () => {
+                    if (confirm('Remove this enhancement?')) {
+                        removeEnhancement(idx);
+                    }
+                };
+                list.appendChild(item);
+            });
+
+            document.getElementById('enhancementTotal').textContent = total;
+
+            // Update total points display with enhancements
+            updateTotalPoints();
+        }
+
+        // Update total points including enhancements
+        function updateTotalPoints() {
+            let armyTotal = 0;
+            gameState.army.forEach(unit => {
+                armyTotal += unit.pts;
+            });
+
+            let enhTotal = 0;
+            enhancements.forEach(enh => {
+                enhTotal += enh.cost;
+            });
+
+            document.getElementById('totalPoints').textContent = armyTotal + enhTotal;
+
+            const enhPoints = document.getElementById('enhancementPoints');
+            if (enhTotal > 0) {
+                enhPoints.textContent = `+ ${enhTotal} (enh)`;
+            } else {
+                enhPoints.textContent = '';
+            }
+        }
+
+        // Stratagem Reference
+        const stratagemData = {
+            heroic: { name: 'Heroic Intervention', cost: 1, effect: 'Move 3" to intervene in combat' },
+            charge: { name: 'Epic Challenge', cost: 1, effect: 'Character can fight after being charged' },
+            transhuman: { name: 'Transhuman Physiology', cost: 1, effect: 'Unit cannot be wounded on rolls below 4' },
+            fireoverwatch: { name: 'Fire Overwatch', cost: 1, effect: 'Shoot at charging unit (max 1 shot per model)' },
+            counter: { name: 'Counter-offensive', cost: 2, effect: 'Fight after enemy in Fight phase' },
+            insane: { name: 'Insane Bravery', cost: 2, effect: 'Auto-pass a Morale test' },
+            precision: { name: 'Precision', cost: 1, effect: 'Character attacks can target Character' },
+            grenade: { name: 'Grenades', cost: 1, effect: 'Throw grenade (D6 S4 AP1 D1)' },
+            linked: { name: 'Linked', cost: 1, effect: 'Twin-linked weapon rerolls all failed hits' },
+            assault: { name: 'Assault', cost: 2, effect: 'Shoot and charge in same turn' }
+        };
+
+        function showStratagem() {
+            const sel = document.getElementById('stratagemSelect').value;
+            const info = document.getElementById('stratagemInfo');
+
+            if (!sel || !stratagemData[sel]) {
+                info.innerHTML = 'Select a stratagem to see its effect';
+                return;
+            }
+
+            const s = stratagemData[sel];
+            info.innerHTML = `
+                <span class="stratagem-cost">${s.cost} CP</span>
+                <strong>${s.name}</strong><br>
+                ${s.effect}
+            `;
+        }
+
+        // Load template also loads relevant enhancements
+        function loadTemplate(faction) {
+            if (armyTemplates[faction]) {
+                if (confirm(`Load ${faction} template? This will replace your current army.`)) {
+                    gameState.army = JSON.parse(JSON.stringify(armyTemplates[faction]));
+                    gameState.unitsOnBoard = [];
+
+                    // Suggest enhancements for faction
+                    const suggested = enhancementDatabase[faction] || enhancementDatabase.generic;
+                    if (suggested.length > 0 && confirm(`Load recommended ${faction} enhancements?`)) {
+                        enhancements = [...suggested];
+                    } else {
+                        enhancements = [];
+                    }
+
+                    renderArmy();
+                    saveArmy();
+                    saveEnhancements();
+                    drawBoard();
+                }
+            }
+        }
+
         function changeMission() {
             const mission = document.getElementById('wtcMission').value;
             const info = wtcMissions[mission];
@@ -1227,6 +1581,7 @@
             loadArmy();
             loadMission();
             loadSecondaries();
+            loadEnhancements();
             drawBoard();
             updateUI();
             loadGameState();
@@ -1326,6 +1681,7 @@
             });
             
             document.getElementById('totalPoints').textContent = total;
+            updateTotalPoints();
         }
         
         function selectUnit(idx) {
