@@ -242,6 +242,17 @@
             background: #1a2d2d;
         }
 
+        .unit-card.battle-shock {
+            border-left-color: var(--phase-morale);
+            background: #2d1a2d;
+            opacity: 0.7;
+        }
+
+        .unit-card.damaged {
+            border-left-color: var(--danger);
+            background: #2d1a1a;
+        }
+
         /* Board Controls */
         .board-controls {
             position: absolute;
@@ -606,6 +617,105 @@
         .morale-result.passed { color: var(--success); }
         .morale-result.failed { color: var(--danger); }
 
+        /* Damage Panel */
+        .damage-panel {
+            margin-top: 15px;
+            padding: 10px;
+            background: #252525;
+            border-radius: 4px;
+            border-left: 3px solid var(--danger);
+        }
+
+        .damage-panel h4 {
+            font-size: 0.8rem;
+            color: var(--danger);
+            margin-bottom: 8px;
+        }
+
+        .damage-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .damage-controls input {
+            flex: 1;
+            background: #333;
+            color: var(--text);
+            border: 1px solid #444;
+            padding: 6px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .damage-btn {
+            background: var(--danger);
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            flex: 1;
+        }
+
+        .damage-btn.heal {
+            background: var(--success);
+        }
+
+        .damage-btn:hover {
+            opacity: 0.9;
+        }
+
+        .battle-shock-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            padding: 8px;
+            background: #1a1a1a;
+            border-radius: 4px;
+        }
+
+        .battle-shock-toggle input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--phase-morale);
+        }
+
+        .battle-shock-toggle label {
+            font-size: 0.75rem;
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .unit-health {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.7rem;
+            color: var(--danger);
+            margin-top: 4px;
+        }
+
+        .health-bar {
+            flex: 1;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .health-fill {
+            height: 100%;
+            background: var(--success);
+            transition: width 0.3s;
+        }
+
+        .health-fill.damaged {
+            background: var(--danger);
+        }
+
         /* Weapon Range Indicator */
         .weapon-range {
             display: inline-block;
@@ -697,6 +807,24 @@
                     <button class="morale-btn" onclick="rollMoraleTest()">🎲 Roll Morale Test</button>
                     <div class="morale-result" id="moraleResult">Select a unit to test</div>
                 </div>
+
+                <!-- Damage Panel -->
+                <div class="damage-panel" id="damagePanel" style="display: none;">
+                    <h4>💔 Wound Tracking</h4>
+                    <div class="damage-controls">
+                        <input type="number" id="damageAmount" value="1" min="1" max="10" placeholder="Dmg">
+                        <button class="damage-btn" onclick="inflictDamage()">💥 Apply</button>
+                        <button class="damage-btn heal" onclick="healDamage()">💚 Heal</button>
+                    </div>
+                    <div class="battle-shock-toggle">
+                        <input type="checkbox" id="battleShockToggle" onchange="toggleBattleShock()">
+                        <label for="battleShockToggle" onclick="toggleBattleShock()">⚠️ Battle Shocked (-1 Leadership)</label>
+                    </div>
+                    <div id="unitHealthDisplay" style="margin-top: 8px; font-size: 0.75rem; color: var(--text);">
+                        -
+                    </div>
+                    <button class="btn-small" style="margin-top: 8px; width: 100%;" onclick="resetUnitWounds()">🔄 Reset Wounds</button>
+                </div>
             </div>
         </div>
         
@@ -712,6 +840,7 @@
                     <button id="btnPlace" onclick="setBoardMode('place')">📍 Place Unit</button>
                     <button id="btnMove" onclick="setBoardMode('move')">🏃 Move</button>
                     <button id="btnRange" onclick="setBoardMode('range')">📏 Show Range</button>
+                    <button onclick="resetMovement()">↩️ Reset Move</button>
                     <button onclick="clearBoardUnits()">🗑️ Clear Board</button>
                 </div>
             </div>
@@ -859,7 +988,7 @@
             cp: 1,
             army: [],
             selectedUnit: null,
-            unitsOnBoard: [], // {unitIndex, x, y, moved}
+            unitsOnBoard: [], // {unitIndex, x, y, moved, wounds, battleShock}
             boardMode: null // 'place', 'move', 'range'
         };
         
@@ -1063,13 +1192,38 @@
             gameState.army.forEach((unit, idx) => {
                 total += unit.pts;
                 const onBoard = gameState.unitsOnBoard.find(u => u.unitIndex === idx);
+                let cardClass = 'unit-card';
+                if (gameState.selectedUnit === idx) cardClass += ' selected';
+                if (onBoard) {
+                    cardClass += ' on-board';
+                    if (onBoard.wounds > 0) cardClass += ' damaged';
+                    if (onBoard.battleShock) cardClass += ' battle-shock';
+                }
+                
                 const card = document.createElement('div');
-                card.className = 'unit-card' + (gameState.selectedUnit === idx ? ' selected' : '') + (onBoard ? ' on-board' : '');
+                card.className = cardClass;
                 card.onclick = () => selectUnit(idx);
+                
+                // Health indicator
+                let healthHtml = '';
+                if (onBoard && onBoard.wounds > 0) {
+                    const remaining = unit.w - onBoard.wounds;
+                    const healthPercent = Math.max(0, remaining / unit.w * 100);
+                    healthHtml = `
+                        <div class="unit-health">
+                            <span>${remaining}/${unit.w} W</span>
+                            <div class="health-bar">
+                                <div class="health-fill ${remaining < unit.w * 0.5 ? 'damaged' : ''}" style="width: ${healthPercent}%"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
                 card.innerHTML = `
-                    <div class="unit-name">${unit.name} <span style="color:var(--gold)">(${unit.pts}pts)</span>${onBoard ? ' 📍' : ''}</div>
+                    <div class="unit-name">${unit.name} <span style="color:var(--gold)">(${unit.pts}pts)</span>${onBoard ? (onBoard.battleShock ? ' ⚠️' : ' 📍') : ''}</div>
                     <div class="unit-stats">M${unit.models} | WS${unit.ws} | BS${unit.bs} | S${unit.s} T${unit.t} W${unit.w} LD${unit.ld} SV${unit.sv}</div>
                     <div class="unit-weapons">${unit.weapons}</div>
+                    ${healthHtml}
                     <div class="movement-info">${gameState.boardMode === 'range' && onBoard ? '📏 Click board to show 3" range' : (gameState.boardMode === 'move' && onBoard ? '🏃 Click to move (max 3")' : (gameState.boardMode === 'place' ? '📍 Click board to place' : ''))}</div>
                 `;
                 list.appendChild(card);
@@ -1090,14 +1244,18 @@
             const panel = document.getElementById('weaponPanel');
             const list = document.getElementById('weaponList');
             const moralePanel = document.getElementById('moralePanel');
+            const damagePanel = document.getElementById('damagePanel');
             
             if (gameState.selectedUnit === null || !gameState.army[gameState.selectedUnit]) {
                 panel.style.display = 'none';
+                moralePanel.style.display = 'none';
+                damagePanel.style.display = 'none';
                 return;
             }
             
             panel.style.display = 'block';
             moralePanel.style.display = 'block';
+            damagePanel.style.display = 'block';
             list.innerHTML = '';
             
             const unit = gameState.army[gameState.selectedUnit];
@@ -1120,6 +1278,9 @@
                 `;
                 list.appendChild(item);
             });
+            
+            // Update damage panel
+            updateDamagePanel();
         }
 
         function parseWeapons(weaponStr) {
@@ -1267,13 +1428,20 @@
             if (gameState.selectedUnit === null) return;
             
             const unit = gameState.army[gameState.selectedUnit];
+            const onBoard = gameState.unitsOnBoard.find(u => u.unitIndex === gameState.selectedUnit);
             const ld = parseInt(document.getElementById('moraleLd').value) || unit.ld;
             const mod = parseInt(document.getElementById('moraleMod').value) || 0;
             const models = unit.models || 1;
             
+            // Battle shock modifier
+            let finalMod = mod;
+            if (onBoard && onBoard.battleShock) {
+                finalMod -= 1; // Battle shock gives -1 to leadership tests
+            }
+            
             // Roll test
             const roll = Math.floor(Math.random() * 6) + 1;
-            const modified = roll + mod;
+            const modified = roll + finalMod;
             
             // Check if failed (over leadership)
             const failed = modified > ld;
@@ -1293,20 +1461,142 @@
                 result.className = 'morale-result failed';
                 result.innerHTML = `
                     <strong>❌ FAILED!</strong><br>
-                    Roll: ${roll} + ${mod} = ${modified} > LD${ld}<br>
+                    Roll: ${roll} + ${finalMod} = ${modified} > LD${ld}<br>
                     <strong>Lost ${modelsLost} model${modelsLost > 1 ? 's' : ''}</strong>
                 `;
             } else {
                 result.className = 'morale-result passed';
                 result.innerHTML = `
                     <strong>✅ PASSED!</strong><br>
-                    Roll: ${roll} + ${mod} = ${modified} ≤ LD${ld}<br>
+                    Roll: ${roll} + ${finalMod} = ${modified} ≤ LD${ld}<br>
                     No models lost
                 `;
             }
             
             // Auto-update morale panel with unit's leadership
             document.getElementById('moraleLd').value = unit.ld;
+        }
+
+        // Damage Tracking Functions
+        function updateDamagePanel() {
+            const panel = document.getElementById('damagePanel');
+            
+            if (gameState.selectedUnit === null) {
+                panel.style.display = 'none';
+                return;
+            }
+            
+            panel.style.display = 'block';
+            
+            const onBoard = gameState.unitsOnBoard.find(u => u.unitIndex === gameState.selectedUnit);
+            if (!onBoard) {
+                document.getElementById('unitHealthDisplay').textContent = 'Place unit on board first';
+                document.getElementById('battleShockToggle').checked = false;
+                return;
+            }
+            
+            const unit = gameState.army[gameState.selectedUnit];
+            const maxWounds = unit.w;
+            const currentWounds = onBoard.wounds || 0;
+            const remaining = maxWounds - currentWounds;
+            const healthPercent = Math.max(0, remaining / maxWounds * 100);
+            
+            // Update health display
+            const healthDisplay = document.getElementById('unitHealthDisplay');
+            healthDisplay.innerHTML = `
+                <div class="unit-health">
+                    <span>${remaining}/${maxWounds} Wounds</span>
+                </div>
+                <div class="health-bar">
+                    <div class="health-fill ${remaining < maxWounds * 0.5 ? 'damaged' : ''}" style="width: ${healthPercent}%"></div>
+                </div>
+            `;
+            
+            // Update battle shock toggle
+            document.getElementById('battleShockToggle').checked = onBoard.battleShock || false;
+        }
+
+        function inflictDamage() {
+            if (gameState.selectedUnit === null) return;
+            
+            const onBoard = gameState.unitsOnBoard.find(u => u.unitIndex === gameState.selectedUnit);
+            if (!onBoard) {
+                alert('Place unit on board first!');
+                return;
+            }
+            
+            const amount = parseInt(document.getElementById('damageAmount').value) || 1;
+            if (!onBoard.wounds) onBoard.wounds = 0;
+            
+            onBoard.wounds = Math.min(onBoard.wounds + amount, gameState.army[gameState.selectedUnit].w);
+            
+            // Check if unit is destroyed
+            if (onBoard.wounds >= gameState.army[gameState.selectedUnit].w) {
+                alert(`${gameState.army[gameState.selectedUnit].name} has been destroyed!`);
+                // Remove from board
+                gameState.unitsOnBoard = gameState.unitsOnBoard.filter(u => u.unitIndex !== gameState.selectedUnit);
+                gameState.selectedUnit = null;
+            }
+            
+            updateDamagePanel();
+            renderArmy();
+            drawBoard();
+            saveGameState();
+        }
+
+        function healDamage() {
+            if (gameState.selectedUnit === null) return;
+            
+            const onBoard = gameState.unitsOnBoard.find(u => u.unitIndex === gameState.selectedUnit);
+            if (!onBoard) {
+                alert('Place unit on board first!');
+                return;
+            }
+            
+            const amount = parseInt(document.getElementById('damageAmount').value) || 1;
+            if (!onBoard.wounds) onBoard.wounds = 0;
+            
+            onBoard.wounds = Math.max(onBoard.wounds - amount, 0);
+            
+            updateDamagePanel();
+            renderArmy();
+            drawBoard();
+            saveGameState();
+        }
+
+        function toggleBattleShock() {
+            if (gameState.selectedUnit === null) return;
+            
+            const onBoard = gameState.unitsOnBoard.find(u => u.unitIndex === gameState.selectedUnit);
+            if (!onBoard) {
+                alert('Place unit on board first!');
+                document.getElementById('battleShockToggle').checked = false;
+                return;
+            }
+            
+            onBoard.battleShock = document.getElementById('battleShockToggle').checked;
+            
+            updateDamagePanel();
+            renderArmy();
+            drawBoard();
+            saveGameState();
+        }
+
+        // Reset wounds for a unit
+        function resetUnitWounds() {
+            if (gameState.selectedUnit === null) return;
+            
+            const onBoard = gameState.unitsOnBoard.find(u => u.unitIndex === gameState.selectedUnit);
+            if (onBoard) {
+                onBoard.wounds = 0;
+                onBoard.battleShock = false;
+                document.getElementById('battleShockToggle').checked = false;
+            }
+            
+            updateDamagePanel();
+            renderArmy();
+            drawBoard();
+            saveGameState();
         }
         
         // Dice Roller
@@ -1618,6 +1908,8 @@
                 const unit = gameState.army[u.unitIndex];
                 if (!unit) return;
                 
+                const remainingWounds = unit.w - (u.wounds || 0);
+                
                 // Movement range circle (if in range mode or selected)
                 if (gameState.boardMode === 'range' || (gameState.selectedUnit !== null && gameState.unitsOnBoard.find(u => u.unitIndex === gameState.selectedUnit))) {
                     const selectedOnBoard = gameState.unitsOnBoard.find(u => u.unitIndex === gameState.selectedUnit);
@@ -1633,13 +1925,24 @@
                     }
                 }
                 
-                // Unit circle
+                // Unit circle - different colors for states
+                let fillColor = '#c9a227';
+                if (u.battleShock) {
+                    fillColor = '#862e9c'; // Purple for battle shock
+                } else if (u.moved) {
+                    fillColor = '#666';
+                } else if (remainingWounds < unit.w * 0.5) {
+                    fillColor = '#c92a2a'; // Red for damaged
+                }
+                
                 ctx.beginPath();
                 ctx.arc(u.x, u.y, 15, 0, Math.PI * 2);
-                ctx.fillStyle = u.moved ? '#666' : (idx === 0 ? '#4dabf7' : '#c9a227');
+                ctx.fillStyle = fillColor;
                 ctx.fill();
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 2;
+                
+                // Border
+                ctx.strokeStyle = u.battleShock ? '#862e9c' : '#fff';
+                ctx.lineWidth = u.battleShock ? 3 : 2;
                 ctx.stroke();
                 
                 // Unit name
@@ -1652,7 +1955,18 @@
                 // Wounds indicator
                 ctx.fillStyle = '#fff';
                 ctx.font = '9px Arial';
-                ctx.fillText(`W${unit.w}`, u.x, u.y + 4);
+                if (u.wounds > 0) {
+                    ctx.fillText(`W${remainingWounds}/${unit.w}`, u.x, u.y + 4);
+                } else {
+                    ctx.fillText(`W${unit.w}`, u.x, u.y + 4);
+                }
+                
+                // Battle shock indicator
+                if (u.battleShock) {
+                    ctx.fillStyle = '#862e9c';
+                    ctx.font = '12px Arial';
+                    ctx.fillText('⚠️', u.x + 12, u.y - 12);
+                }
             });
             
             // Labels
@@ -1700,10 +2014,13 @@
                         unitIndex: gameState.selectedUnit,
                         x: x,
                         y: y,
-                        moved: false
+                        moved: false,
+                        wounds: 0,
+                        battleShock: false
                     });
                 }
                 renderArmy();
+                updateWeaponPanel();
             } else if (gameState.boardMode === 'move' && existingIdx >= 0) {
                 // Simple 3" (150px) movement check
                 const unit = gameState.unitsOnBoard[existingIdx];
@@ -1733,6 +2050,16 @@
                 drawBoard();
                 saveGameState();
             }
+        }
+
+        // Reset movement for all units (new turn)
+        function resetMovement() {
+            gameState.unitsOnBoard.forEach(u => {
+                u.moved = false;
+            });
+            renderArmy();
+            drawBoard();
+            saveGameState();
         }
         
         // Initialize
