@@ -1222,6 +1222,34 @@
                 <div id="selectedSecList" style="color:var(--text-dim);">None</div>
             </div>
             
+            <!-- Army Enhancements (WTC 10th Ed) -->
+            <h2 style="margin-top:15px;">✨ Enhancements</h2>
+            <div class="objectives" id="enhancements">
+                <div class="objective" data-enh="panoptis" onclick="selectQuickEnhancement(this, 'panoptis')">
+                    <strong>Panoptis</strong><br><span style="font-size:0.65rem">20pts - 4+ Invuln</span>
+                </div>
+                <div class="objective" data-enh="aegis" onclick="selectQuickEnhancement(this, 'aegis')">
+                    <strong>Auric Armour</strong><br><span style="font-size:0.65rem">15pts - FNP 5+</span>
+                </div>
+                <div class="objective" data-enh="stride" onclick="selectQuickEnhancement(this, 'stride')">
+                    <strong>Stride of Emperor</strong><br><span style="font-size:0.65rem">30pts - Deep Strike</span>
+                </div>
+                <div class="objective" data-enh="unstop" onclick="selectQuickEnhancement(this, 'unstop')">
+                    <strong>Unstoppable</strong><br><span style="font-size:0.65rem">25pts - Reroll 1s, +1S</span>
+                </div>
+                <div class="objective" data-enh="preservation" onclick="selectQuickEnhancement(this, 'preservation')">
+                    <strong>Preservation</strong><br><span style="font-size:0.65rem">10pts - Feel No Pain 6+</span>
+                </div>
+                <div class="objective" data-enh="tenacity" onclick="selectQuickEnhancement(this, 'tenacity')">
+                    <strong>Tenacity</strong><br><span style="font-size:0.65rem">20pts - Leader Ld 10</span>
+                </div>
+            </div>
+            <div class="selected-secondaries" style="margin-top:10px; font-size:0.75rem;">
+                <div style="color:var(--gold); margin-bottom:5px;">Selected Enhancements:</div>
+                <div id="enhancementPts" style="color:var(--text-dim);">0 pts</div>
+                <div id="enhancementList" style="color:var(--text-dim);">None</div>
+            </div>
+            
             <div class="btn-group">
                 <button class="btn-small" onclick="nextPhase()">Next Phase ⏭️</button>
                 <button class="btn-small danger" onclick="resetGame()">Reset 🔄</button>
@@ -1581,7 +1609,7 @@
             loadArmy();
             loadMission();
             loadSecondaries();
-            loadEnhancements();
+            loadQuickEnhancements();
             drawBoard();
             updateUI();
             loadGameState();
@@ -2354,6 +2382,52 @@
                     };
                     document.getElementById('selectedSecList').textContent = selectedSecondaries.map(s => names[s]).join(', ');
                 }
+            }
+        }
+        
+        // Army Enhancements (WTC 10th Ed Quick Select)
+        let selectedQuickEnhancements = [];
+        const quickEnhancementCosts = {
+            'panoptis': 20, 'aegis': 15, 'stride': 30, 'unstop': 25, 'preservation': 10, 'tenacity': 20
+        };
+        const quickEnhancementNames = {
+            'panoptis': 'Panoptis', 'aegis': 'Auric Armour', 'stride': 'Stride of Emperor',
+            'unstop': 'Unstoppable', 'preservation': 'Preservation', 'tenacity': 'Tenacity'
+        };
+        
+        function selectQuickEnhancement(el, enhId) {
+            const ptsDisplay = document.getElementById('enhancementPts');
+            const listDisplay = document.getElementById('enhancementList');
+            
+            if (selectedQuickEnhancements.includes(enhId)) {
+                selectedQuickEnhancements = selectedQuickEnhancements.filter(e => e !== enhId);
+                el.classList.remove('selected');
+            } else {
+                selectedQuickEnhancements.push(enhId);
+                el.classList.add('selected');
+            }
+            
+            const totalPts = selectedQuickEnhancements.reduce((sum, e) => sum + (quickEnhancementCosts[e] || 0), 0);
+            ptsDisplay.textContent = totalPts + ' pts';
+            ptsDisplay.style.color = totalPts > 65 ? 'var(--danger)' : 'var(--success)';
+            listDisplay.textContent = selectedQuickEnhancements.length > 0 
+                ? selectedQuickEnhancements.map(e => quickEnhancementNames[e]).join(', ')
+                : 'None';
+            
+            localStorage.setItem('wh40k_quick_enhancements', JSON.stringify(selectedQuickEnhancements));
+        }
+        
+        function loadQuickEnhancements() {
+            const saved = localStorage.getItem('wh40k_quick_enhancements');
+            if (saved) {
+                selectedQuickEnhancements = JSON.parse(saved);
+                selectedQuickEnhancements.forEach(enhId => {
+                    const el = document.querySelector(`[data-enh="${enhId}"]`);
+                    if (el) el.classList.add('selected');
+                });
+                const totalPts = selectedQuickEnhancements.reduce((sum, e) => sum + (quickEnhancementCosts[e] || 0), 0);
+                document.getElementById('enhancementPts').textContent = totalPts + ' pts';
+                document.getElementById('enhancementList').textContent = selectedQuickEnhancements.map(e => quickEnhancementNames[e]).join(', ');
             }
         }
         
