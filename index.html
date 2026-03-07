@@ -1150,6 +1150,12 @@
                     <button onclick="resetMovement()">↩️ Reset Move</button>
                     <button onclick="clearBoardUnits()">🗑️ Clear Board</button>
                 </div>
+                <div class="board-legend" style="margin-top: 8px; padding: 8px; background: #252525; border-radius: 4px; font-size: 0.65rem; display: flex; gap: 12px; flex-wrap: wrap;">
+                    <span>🔵 3"/6" Move</span>
+                    <span>🔴 Charge D6"+2"</span>
+                    <span>🟠 Weapon Range</span>
+                    <span>⚫ 9" DS Zone</span>
+                </div>
             </div>
             
             <div class="dice-section">
@@ -2673,18 +2679,113 @@
                 
                 const remainingWounds = unit.w - (u.wounds || 0);
                 
-                // Movement range circle (if in range mode or selected)
-                if (gameState.boardMode === 'range' || (gameState.selectedUnit !== null && gameState.unitsOnBoard.find(u => u.unitIndex === gameState.selectedUnit))) {
+                // Movement range circles (if in range mode or selected)
+                if (gameState.boardMode === 'range' || gameState.boardMode === 'move' || (gameState.selectedUnit !== null && gameState.unitsOnBoard.find(u => u.unitIndex === gameState.selectedUnit))) {
                     const selectedOnBoard = gameState.unitsOnBoard.find(u => u.unitIndex === gameState.selectedUnit);
                     if (selectedOnBoard) {
-                        ctx.beginPath();
-                        ctx.arc(selectedOnBoard.x, selectedOnBoard.y, 150, 0, Math.PI * 2); // 3" at 50px = 150px
-                        ctx.fillStyle = 'rgba(77, 171, 247, 0.15)';
-                        ctx.fill();
-                        ctx.strokeStyle = '#4dabf7';
-                        ctx.setLineDash([5, 5]);
-                        ctx.stroke();
+                        const unit = gameState.army[selectedOnBoard.unitIndex];
+                        const isVehicle = unit.t >= 7;
+                        const isInfantry = unit.t <= 4;
+                        
+                        // Determine movement distances based on unit type (WTC 10th Ed)
+                        let moveDistances = [];
+                        if (isVehicle) {
+                            moveDistances = [150, 300, 450]; // 3", 6", 9" for vehicles
+                        } else {
+                            moveDistances = [150, 300]; // 3", 6" for infantry
+                        }
+                        
+                        // Draw movement range circles
+                        moveDistances.forEach((dist, i) => {
+                            ctx.beginPath();
+                            ctx.arc(selectedOnBoard.x, selectedOnBoard.y, dist, 0, Math.PI * 2);
+                            const alpha = 0.15 - (i * 0.04);
+                            ctx.fillStyle = `rgba(77, 171, 247, ${alpha})`;
+                            ctx.fill();
+                            ctx.strokeStyle = i === 0 ? '#4dabf7' : 'rgba(77, 171, 247, 0.4)';
+                            ctx.setLineDash([5, 5]);
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                            
+                            // Label for key distances
+                            if (i < 2) {
+                                ctx.fillStyle = 'rgba(77, 171, 247, 0.7)';
+                                ctx.font = '9px Arial';
+                                ctx.textAlign = 'left';
+                                const label = isVehicle ? (i === 0 ? '3"' : i === 1 ? '6"' : '9"') : (i === 0 ? '3"' : '6"');
+                                ctx.fillText(label, selectedOnBoard.x + dist + 3, selectedOnBoard.y);
+                            }
+                        });
                         ctx.setLineDash([]);
+                        
+                        // Charge range visualization (D6 + 2" = average ~5.5" = ~275px base)
+                        if (gameState.phase === 'charge' || gameState.boardMode === 'range') {
+                            // Draw charge arc (D6" + 2")
+                            for (let d = 2; d <= 7; d++) {
+                                const chargeDist = d * 50; // D6" + 2" = 2-8"
+                                ctx.beginPath();
+                                ctx.arc(selectedOnBoard.x, selectedOnBoard.y, chargeDist, 0, Math.PI * 2);
+                                ctx.strokeStyle = d <= 4 ? 'rgba(224, 49, 49, 0.1)' : d <= 6 ? 'rgba(224, 49, 49, 0.15)' : 'rgba(224, 49, 49, 0.2)';
+                                ctx.lineWidth = 8;
+                                ctx.stroke();
+                            }
+                            // Charge range label
+                            ctx.fillStyle = 'rgba(224, 49, 49, 0.8)';
+                            ctx.font = 'bold 10px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('CHARGE: D6"+2"', selectedOnBoard.x, selectedOnBoard.y - 160);
+                            
+                            // Draw D6 average line
+                            ctx.beginPath();
+                            ctx.arc(selectedOnBoard.x, selectedOnBoard.y, 275, 0, Math.PI * 2); // ~5.5" average
+                            ctx.strokeStyle = 'rgba(224, 49, 49, 0.4)';
+                            ctx.lineWidth = 2;
+                            ctx.stroke();
+                        }
+                        
+                        // Shooting range - if weapon selected
+                        if (gameState.boardMode === 'range' && gameState.selectedWeapon) {
+                            const weapon = gameState.army[selectedOnBoard.unitIndex].weapons;
+                            // Parse range from weapon (simple check for 12", 18", 24", etc)
+                            const rangeMatch = weapon.match(/(\d+)"/);
+                            if (rangeMatch) {
+                                const rangePx = parseInt(rangeMatch[1]) * 50;
+                                ctx.beginPath();
+                                ctx.arc(selectedOnBoard.x, selectedOnBoard.y, rangePx, 0, Math.PI * 2);
+                                ctx.fillStyle = 'rgba(247, 103, 7, 0.1)';
+                                ctx.fill();
+                                ctx.strokeStyle = '#f76707';
+                                ctx.setLineDash([3, 3]);
+                                ctx.stroke();
+                                ctx.setLineDash([]);
+                                
+                                ctx.fillStyle = 'rgba(247, 103, 7, 0.8)';
+                                ctx.font = '10px Arial';
+                                ctx.textAlign = 'left';
+                                ctx.fillText(`RANGE: ${rangeMatch[1]}"`, selectedOnBoard.x + rangePx + 3, selectedOnBoard.y);
+                            }
+                        }
+                        
+                        // 9" deep strike denial zone
+                        if (gameState.phase === 'movement') {
+                            gameState.unitsOnBoard.forEach(enemy => {
+                                if (enemy.unitIndex !== selectedOnBoard.unitIndex) {
+                                    ctx.beginPath();
+                                    ctx.arc(enemy.x, enemy.y, 450, 0, Math.PI * 2); // 9" = 450px
+                                    ctx.fillStyle = 'rgba(201, 42, 42, 0.08)';
+                                    ctx.fill();
+                                    ctx.strokeStyle = 'rgba(201, 42, 42, 0.3)';
+                                    ctx.setLineDash([3, 6]);
+                                    ctx.stroke();
+                                    ctx.setLineDash([]);
+                                    
+                                    ctx.fillStyle = 'rgba(201, 42, 42, 0.6)';
+                                    ctx.font = '8px Arial';
+                                    ctx.textAlign = 'center';
+                                    ctx.fillText('9" DS DENIED', enemy.x, enemy.y - 460);
+                                }
+                            });
+                        }
                     }
                 }
                 
