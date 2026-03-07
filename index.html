@@ -431,18 +431,28 @@
             color: #fff;
         }
 
-        /* WTC Info */
-        .wtc-info {
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
-            padding: 10px;
-            border-radius: 4px;
+        /* Army Templates */
+        .army-templates {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
             margin-bottom: 15px;
-            font-size: 0.75rem;
-            border: 1px solid var(--gold-dim);
         }
-        
-        .wtc-info strong {
-            color: var(--gold);
+
+        .template-btn {
+            background: #333;
+            color: var(--text);
+            border: 1px solid #444;
+            padding: 6px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            transition: all 0.2s;
+        }
+
+        .template-btn:hover {
+            background: var(--gold-dim);
+            color: #000;
         }
     </style>
 </head>
@@ -453,6 +463,13 @@
         <!-- Left Panel: Army -->
         <div class="panel">
             <h2>🎖️ Army List</h2>
+            
+            <div class="army-templates">
+                <button class="template-btn" onclick="loadTemplate('custodes')">🛡️ Custodes</button>
+                <button class="template-btn" onclick="loadTemplate('spacemarines')">⚔️ Space Marines</button>
+                <button class="template-btn" onclick="loadTemplate('darkangels')">🔱 Dark Angels</button>
+                <button class="template-btn" onclick="loadTemplate('orks')">🐗 Orks</button>
+            </div>
             
             <div class="army-section">
                 <div class="add-unit">
@@ -623,6 +640,68 @@
             { name: 'Witchseekers', pts: 50, models: 3, ws: 3, bs: 3, s: 5, t: 4, w: 2, ld: 6, sv: 5, weapons: 'Ranging Laser (18", S5, AP-1, 1)' },
             { name: 'Vertus Praetors', pts: 75, models: 2, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 2, weapons: 'Hurricane Bolter (24", S4, AP-1, 1)' }
         ];
+
+        // Army Templates (WTC Legal ~2000pts)
+        const armyTemplates = {
+            custodes: [
+                { name: 'Trajann Valoris', pts: 145, models: 1, ws: 2, bs: 2, s: 6, t: 6, w: 6, ld: 6, sv: 2, weapons: 'Witchsword (S+2, AP-3, D3)' },
+                { name: 'Blade Champion', pts: 130, models: 1, ws: 2, bs: 2, s: 5, t: 5, w: 5, ld: 6, sv: 2, weapons: 'Vaultsword (S+1, AP-3, D3)' },
+                { name: 'Custodian Guard', pts: 45, models: 3, ws: 3, bs: 3, s: 5, t: 5, w: 3, ld: 6, sv: 3, weapons: 'Guardian Spear (S+1, AP-2, 2)' },
+                { name: 'Custodian Guard', pts: 45, models: 3, ws: 3, bs: 3, s: 5, t: 5, w: 3, ld: 6, sv: 3, weapons: 'Guardian Spear (S+1, AP-2, 2)' },
+                { name: 'Allarus Custodian', pts: 65, models: 1, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 2, weapons: 'Balistus Grenade (4, S8, AP-2, D3)' },
+                { name: 'Allarus Custodian', pts: 65, models: 1, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 2, weapons: 'Balistus Grenade (4, S8, AP-2, D3)' },
+                { name: 'Witchseekers', pts: 50, models: 3, ws: 3, bs: 3, s: 5, t: 4, w: 2, ld: 6, sv: 5, weapons: 'Ranging Laser (18", S5, AP-1, 1)' },
+                { name: 'Witchseekers', pts: 50, models: 3, ws: 3, bs: 3, s: 5, t: 4, w: 2, ld: 6, sv: 5, weapons: 'Ranging Laser (18", S5, AP-1, 1)' },
+                { name: 'Vertus Praetors', pts: 155, models: 3, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 2, weapons: 'Hurricane Bolter (24", S4, AP-1, 1)' },
+                { name: 'Caladius Grav-tank', pts: 215, models: 1, ws: 6, bs: 3, s: 8, t: 8, w: 12, ld: 6, sv: 3, weapons: 'Twin Iliastrus (24", S8, AP-2, D6)' }
+            ],
+            spacemarines: [
+                { name: 'Captain in Terminator', pts: 100, models: 1, ws: 2, bs: 2, s: 4, t: 4, w: 5, ld: 6, sv: 2, weapons: 'Relic Blade (S+1, AP-3, D3)' },
+                { name: 'Librarian in Terminator', pts: 95, models: 1, ws: 3, bs: 3, s: 4, t: 4, w: 4, ld: 6, sv: 2, weapons: 'Force Sword (S+2, AP-2, D3)' },
+                { name: 'Terminator Squad', pts: 200, models: 5, ws: 3, bs: 3, s: 4, t: 4, w: 2, ld: 6, sv: 2, weapons: 'Power Fist (S+2, AP-2, D3)' },
+                { name: 'Terminator Squad', pts: 200, models: 5, ws: 3, bs: 3, s: 4, t: 4, w: 2, ld: 6, sv: 2, weapons: 'Power Fist (S+2, AP-2, D3)' },
+                { name: 'Assault Intercessors', pts: 150, models: 10, ws: 3, bs: 3, s: 4, t: 4, w: 2, ld: 6, sv: 3, weapons: 'Heavy Bolt Pistol (12", S4, AP-1, 1)' },
+                { name: 'Infernus Squad', pts: 130, models: 5, ws: 4, bs: 3, s: 4, t: 4, w: 2, ld: 6, sv: 3, weapons: 'Bolt Pistol (12", S4, AP-1, 1)' },
+                { name: 'Eradicator Squad', pts: 150, models: 3, ws: 3, bs: 3, s: 5, t: 5, w: 3, ld: 6, sv: 3, weapons: 'Melta Rifle (18", S8, AP-3, D6)' },
+                { name: 'Repulsor', pts: 215, models: 1, ws: 6, bs: 3, s: 8, t: 8, w: 14, ld: 6, sv: 3, weapons: 'Twin Lascannon (24", S12, AP-3, D6)' },
+                { name: 'Impulsor', pts: 110, models: 1, ws: 6, bs: 3, s: 5, t: 6, w: 8, ld: 6, sv: 3, weapons: 'Ironhail Heavy Stubber (24", S5, AP-1, 1)' }
+            ],
+            darkangels: [
+                { name: 'Lazarian', pts: 115, models: 1, ws: 2, bs: 2, s: 4, t: 4, w: 5, ld: 7, sv: 2, weapons: 'Armour of the Unforgiven (4++)' },
+                { name: 'Ezekyle', pts: 100, models: 1, ws: 2, bs: 2, s: 4, t: 4, w: 4, ld: 7, sv: 2, weapons: 'Heavenfall Blade (S+2, AP-3, D2)' },
+                { name: 'Deathwing Knights', pts: 225, models: 5, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 7, sv: 2, weapons: 'Storm Shield (4++, S+2, AP-2, D2)' },
+                { name: 'Deathwing Terminator', pts: 180, models: 5, ws: 3, bs: 3, s: 4, t: 4, w: 3, ld: 7, sv: 2, weapons: 'Power Fist (S+2, AP-2, D3)' },
+                { name: 'Ravenwing Black Knights', pts: 140, models: 3, ws: 3, bs: 3, s: 4, t: 4, w: 3, ld: 7, sv: 3, weapons: 'Corvus Hammer (S+1, AP-2, D2)' },
+                { name: 'Outrider Squad', pts: 125, models: 3, ws: 4, bs: 3, s: 4, t: 4, w: 3, ld: 7, sv: 3, weapons: 'Heavy Bolt Pistol (12", S4, AP-1, 1)' },
+                { name: 'Assault Intercessors', pts: 90, models: 5, ws: 3, bs: 3, s: 4, t: 4, w: 2, ld: 7, sv: 3, weapons: 'Heavy Bolt Pistol (12", S4, AP-1, 1)' },
+                { name: 'Gladiator Lancer', pts: 160, models: 1, ws: 6, bs: 3, s: 8, t: 8, w: 10, ld: 6, sv: 3, weapons: 'Twin Lascannon (24", S12, AP-3, D6)' },
+                { name: 'Ballistus Dreadnought', pts: 170, models: 1, ws: 3, bs: 3, s: 6, t: 6, w: 8, ld: 6, sv: 3, weapons: 'Twin Lascannon (24", S12, AP-3, D6)' }
+            ],
+            orks: [
+                { name: 'Ghazghkull Thraka', pts: 230, models: 1, ws: 2, bs: 2, s: 6, t: 6, w: 6, ld: 8, sv: 4, weapons: 'Waaagh! Banner (S+2, AP-2, D3)' },
+                { name: 'Warboss in Mega Armor', pts: 110, models: 1, ws: 2, bs: 2, s: 6, t: 6, w: 6, ld: 8, sv: 3, weapons: 'Kustom Shoota (12", S5, AP-1, 1)' },
+                { name: 'Meganobz', pts: 90, models: 3, ws: 3, bs: 4, s: 5, t: 5, w: 4, ld: 7, sv: 3, weapons: 'Killsaw (S+2, AP-3, D3)' },
+                { name: 'Mek', pts: 55, models: 1, ws: 4, bs: 3, s: 4, t: 4, w: 4, ld: 7, sv: 4, weapons: 'Kustom Mega-blasta (18", S7, AP-2, D3)' },
+                { name: 'Beastboss', pts: 80, models: 1, ws: 3, bs: 3, s: 6, t: 5, w: 5, ld: 7, sv: 4, weapons: 'Thump Gun (18", S7, AP-2, D3)' },
+                { name: 'Gretchin', pts: 40, models: 20, ws: 5, bs: 5, s: 2, t: 2, w: 1, ld: 5, sv: 6, weapons: 'Grot Blaster (12", S3, AP-1, 1)' },
+                { name: 'Boyz', pts: 130, models: 20, ws: 4, bs: 4, s: 4, t: 4, w: 1, ld: 6, sv: 6, weapons: 'Choppa (S, AP-1, 1)' },
+                { name: 'Boyz', pts: 65, models: 10, ws: 4, bs: 4, s: 4, t: 4, w: 1, ld: 6, sv: 6, weapons: 'Choppa (S, AP-1, 1)' },
+                { name: 'Deffkoptas', pts: 75, models: 2, ws: 4, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 5, weapons: 'KMB (18", S7, AP-2, D3)' },
+                { name: 'Killa Kans', pts: 75, models: 3, ws: 4, bs: 4, s: 5, t: 5, w: 4, ld: 6, sv: 4, weapons: 'Grot Blasta (18", S7, AP-1, D2)' }
+            ]
+        };
+
+        function loadTemplate(faction) {
+            if (armyTemplates[faction]) {
+                if (confirm(`Load ${faction} template? This will replace your current army.`)) {
+                    gameState.army = JSON.parse(JSON.stringify(armyTemplates[faction]));
+                    gameState.unitsOnBoard = [];
+                    renderArmy();
+                    saveArmy();
+                    drawBoard();
+                }
+            }
+        }
         
         // Initialize
         function init() {
