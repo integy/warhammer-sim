@@ -289,10 +289,19 @@
             font-size: 0.85rem;
         }
         
+        .unit-card[style*="fightsFirst"], .unit-card.fights-first {
+            border-left-color: #ffd700;
+            background: linear-gradient(90deg, #2d2d1a 0%, #252525 30%);
+        }
+        
         .unit-stats {
             font-size: 0.75rem;
             color: var(--text-dim);
             margin-top: 4px;
+        }
+        
+        .unit-stats:has(strong), .unit-stats:has(⚡) {
+            color: #ffd700;
         }
         
         .unit-weapons {
@@ -994,12 +1003,26 @@
         
         // Default WTC Army
         const defaultUnits = [
-            { name: 'Trajann Valoris', pts: 145, models: 1, ws: 2, bs: 2, s: 6, t: 6, w: 6, ld: 6, sv: 2, weapons: 'Witchsword (S+2, AP-3, D3)' },
-            { name: 'Custodian Guard', pts: 45, models: 3, ws: 3, bs: 3, s: 5, t: 5, w: 3, ld: 6, sv: 3, weapons: 'Guardian Spear (S+1, AP-2, 2)' },
-            { name: 'Allarus Custodian', pts: 65, models: 1, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 2, weapons: 'Balistus Grenade (4, S8, AP-2, D3)' },
+            { name: 'Trajann Valoris', pts: 145, models: 1, ws: 2, bs: 2, s: 6, t: 6, w: 6, ld: 6, sv: 2, weapons: 'Witchsword (Melee, S+2, AP-3, D3)', fightsFirst: true },
+            { name: 'Custodian Guard', pts: 45, models: 3, ws: 3, bs: 3, s: 5, t: 5, w: 3, ld: 6, sv: 3, weapons: 'Guardian Spear (Melee, S+1, AP-2, 2)' },
+            { name: 'Allarus Custodian', pts: 65, models: 1, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 2, weapons: 'Balistus Grenade Launcher (12", S8, AP-2, D3), Power Sword (Melee, S+1, AP-3, D3)' },
             { name: 'Witchseekers', pts: 50, models: 3, ws: 3, bs: 3, s: 5, t: 4, w: 2, ld: 6, sv: 5, weapons: 'Ranging Laser (18", S5, AP-1, 1)' },
-            { name: 'Vertus Praetors', pts: 75, models: 2, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 2, weapons: 'Hurricane Bolter (24", S4, AP-1, 1)' }
+            { name: 'Vertus Praetors', pts: 75, models: 2, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 2, weapons: 'Hurricane Bolter (24", S4, AP-1, 1), Power Lance (Melee, S+1, AP-2, D3)' }
         ];
+
+        // Custodes Weapon Database (10th Ed WTC)
+        const custodesWeapons = {
+            'Witchsword': { range: 'Melee', s: 'S+2', ap: '-3', d: 'D3', abilities: 'Devastating Wounds' },
+            'Vaultsword': { range: 'Melee', s: 'S+1', ap: '-3', d: 'D3', abilities: '' },
+            'Guardian Spear': { range: 'Melee', s: 'S+1', ap: '-2', d: '2', abilities: '' },
+            'Power Sword': { range: 'Melee', s: 'S+1', ap: '-3', d: 'D3', abilities: '' },
+            'Power Lance': { range: 'Melee', s: 'S+1', ap: '-2', d: 'D3', abilities: 'Lance' },
+            'Balistus Grenade Launcher': { range: '12"', s: 'S8', ap: '-2', d: 'D3', abilities: 'Blast, Indirect' },
+            'Ranging Laser': { range: '18"', s: 'S5', ap: '-1', d: '1', abilities: 'Sustained Hits 1' },
+            'Hurricane Bolter': { range: '24"', s: 'S4', ap: '-1', d: '1', abilities: 'Rapid Fire 3' },
+            'Twin Iliastrus': { range: '24"', s: 'S8', ap: '-2', d: 'D6', abilities: 'Twin Linked' },
+            'Arachnus Blaze Cannon': { range: '24"', s: 'S9', ap: '-2', d: 'D6', abilities: 'Hazardous, Ignores Cover' }
+        };
 
         // WTC Missions
         const wtcMissions = {
@@ -1033,18 +1056,19 @@
             custodes: [
                 { name: 'Trajann Valoris', pts: 145, models: 1, ws: 2, bs: 2, s: 6, t: 6, w: 6, ld: 6, sv: 2, weapons: 'Witchsword (S+2, AP-3, D3)' },
                 { name: 'Blade Champion', pts: 130, models: 1, ws: 2, bs: 2, s: 5, t: 5, w: 5, ld: 6, sv: 2, weapons: 'Vaultsword (S+1, AP-3, D3)' },
-                { name: 'Custodian Guard', pts: 45, models: 3, ws: 3, bs: 3, s: 5, t: 5, w: 3, ld: 6, sv: 3, weapons: 'Guardian Spear (S+1, AP-2, 2)' },
-                { name: 'Custodian Guard', pts: 45, models: 3, ws: 3, bs: 3, s: 5, t: 5, w: 3, ld: 6, sv: 3, weapons: 'Guardian Spear (S+1, AP-2, 2)' },
-                { name: 'Allarus Custodian', pts: 65, models: 1, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 2, weapons: 'Balistus Grenade (4, S8, AP-2, D3)' },
-                { name: 'Allarus Custodian', pts: 65, models: 1, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 2, weapons: 'Balistus Grenade (4, S8, AP-2, D3)' },
+                { name: 'Custodian Guard', pts: 45, models: 3, ws: 3, bs: 3, s: 5, t: 5, w: 3, ld: 6, sv: 3, weapons: 'Guardian Spear (Melee, S+1, AP-2, 2)' },
+                { name: 'Custodian Guard', pts: 45, models: 3, ws: 3, bs: 3, s: 5, t: 5, w: 3, ld: 6, sv: 3, weapons: 'Guardian Spear (Melee, S+1, AP-2, 2)' },
+                { name: 'Blade Champion', pts: 130, models: 1, ws: 2, bs: 2, s: 5, t: 5, w: 5, ld: 6, sv: 2, weapons: 'Vaultsword (Melee, S+1, AP-3, D3)', fightsFirst: true },
+                { name: 'Allarus Custodian', pts: 65, models: 1, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 2, weapons: 'Balistus Grenade (12", S8, AP-2, D3), Power Sword (Melee, S+1, AP-3, D3)' },
+                { name: 'Allarus Custodian', pts: 65, models: 1, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 2, weapons: 'Balistus Grenade (12", S8, AP-2, D3), Power Sword (Melee, S+1, AP-3, D3)' },
                 { name: 'Witchseekers', pts: 50, models: 3, ws: 3, bs: 3, s: 5, t: 4, w: 2, ld: 6, sv: 5, weapons: 'Ranging Laser (18", S5, AP-1, 1)' },
                 { name: 'Witchseekers', pts: 50, models: 3, ws: 3, bs: 3, s: 5, t: 4, w: 2, ld: 6, sv: 5, weapons: 'Ranging Laser (18", S5, AP-1, 1)' },
-                { name: 'Vertus Praetors', pts: 155, models: 3, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 2, weapons: 'Hurricane Bolter (24", S4, AP-1, 1)' },
+                { name: 'Vertus Praetors', pts: 155, models: 3, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 2, weapons: 'Hurricane Bolter (24", S4, AP-1, 1), Power Lance (Melee, S+1, AP-2, D3)' },
                 { name: 'Caladius Grav-tank', pts: 215, models: 1, ws: 6, bs: 3, s: 8, t: 8, w: 12, ld: 6, sv: 3, weapons: 'Twin Iliastrus (24", S8, AP-2, D6)' }
             ],
             spacemarines: [
-                { name: 'Captain in Terminator', pts: 100, models: 1, ws: 2, bs: 2, s: 4, t: 4, w: 5, ld: 6, sv: 2, weapons: 'Relic Blade (S+1, AP-3, D3)' },
-                { name: 'Librarian in Terminator', pts: 95, models: 1, ws: 3, bs: 3, s: 4, t: 4, w: 4, ld: 6, sv: 2, weapons: 'Force Sword (S+2, AP-2, D3)' },
+                { name: 'Captain in Terminator', pts: 100, models: 1, ws: 2, bs: 2, s: 4, t: 4, w: 5, ld: 6, sv: 2, weapons: 'Relic Blade (Melee, S+1, AP-3, D3)', fightsFirst: true },
+                { name: 'Librarian in Terminator', pts: 95, models: 1, ws: 3, bs: 3, s: 4, t: 4, w: 4, ld: 6, sv: 2, weapons: 'Force Sword (Melee, S+2, AP-2, D3)' },
                 { name: 'Terminator Squad', pts: 200, models: 5, ws: 3, bs: 3, s: 4, t: 4, w: 2, ld: 6, sv: 2, weapons: 'Power Fist (S+2, AP-2, D3)' },
                 { name: 'Terminator Squad', pts: 200, models: 5, ws: 3, bs: 3, s: 4, t: 4, w: 2, ld: 6, sv: 2, weapons: 'Power Fist (S+2, AP-2, D3)' },
                 { name: 'Assault Intercessors', pts: 150, models: 10, ws: 3, bs: 3, s: 4, t: 4, w: 2, ld: 6, sv: 3, weapons: 'Heavy Bolt Pistol (12", S4, AP-1, 1)' },
@@ -1054,8 +1078,8 @@
                 { name: 'Impulsor', pts: 110, models: 1, ws: 6, bs: 3, s: 5, t: 6, w: 8, ld: 6, sv: 3, weapons: 'Ironhail Heavy Stubber (24", S5, AP-1, 1)' }
             ],
             darkangels: [
-                { name: 'Lazarian', pts: 115, models: 1, ws: 2, bs: 2, s: 4, t: 4, w: 5, ld: 7, sv: 2, weapons: 'Armour of the Unforgiven (4++)' },
-                { name: 'Ezekyle', pts: 100, models: 1, ws: 2, bs: 2, s: 4, t: 4, w: 4, ld: 7, sv: 2, weapons: 'Heavenfall Blade (S+2, AP-3, D2)' },
+                { name: 'Lazarian', pts: 115, models: 1, ws: 2, bs: 2, s: 4, t: 4, w: 5, ld: 7, sv: 2, weapons: 'Armour of the Unforgiven (4++)', fightsFirst: true },
+                { name: 'Ezekyle', pts: 100, models: 1, ws: 2, bs: 2, s: 4, t: 4, w: 4, ld: 7, sv: 2, weapons: 'Heavenfall Blade (Melee, S+2, AP-3, D2)', fightsFirst: true },
                 { name: 'Deathwing Knights', pts: 225, models: 5, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 7, sv: 2, weapons: 'Storm Shield (4++, S+2, AP-2, D2)' },
                 { name: 'Deathwing Terminator', pts: 180, models: 5, ws: 3, bs: 3, s: 4, t: 4, w: 3, ld: 7, sv: 2, weapons: 'Power Fist (S+2, AP-2, D3)' },
                 { name: 'Ravenwing Black Knights', pts: 140, models: 3, ws: 3, bs: 3, s: 4, t: 4, w: 3, ld: 7, sv: 3, weapons: 'Corvus Hammer (S+1, AP-2, D2)' },
@@ -1220,11 +1244,11 @@
                 }
                 
                 card.innerHTML = `
-                    <div class="unit-name">${unit.name} <span style="color:var(--gold)">(${unit.pts}pts)</span>${onBoard ? (onBoard.battleShock ? ' ⚠️' : ' 📍') : ''}</div>
-                    <div class="unit-stats">M${unit.models} | WS${unit.ws} | BS${unit.bs} | S${unit.s} T${unit.t} W${unit.w} LD${unit.ld} SV${unit.sv}</div>
+                    <div class="unit-name">${unit.name} <span style="color:var(--gold)">(${unit.pts}pts)</span>${unit.fightsFirst ? ' ⚡' : ''}${onBoard ? (onBoard.battleShock ? ' ⚠️' : ' 📍') : ''}</div>
+                    <div class="unit-stats">M${unit.models} | WS${unit.ws} | BS${unit.bs} | S${unit.s} T${unit.t} W${unit.w} LD${unit.ld} SV${unit.sv}${unit.fightsFirst ? ' | ⚡Fights First' : ''}</div>
                     <div class="unit-weapons">${unit.weapons}</div>
                     ${healthHtml}
-                    <div class="movement-info">${gameState.boardMode === 'range' && onBoard ? '📏 Click board to show 3" range' : (gameState.boardMode === 'move' && onBoard ? '🏃 Click to move (max 3")' : (gameState.boardMode === 'place' ? '📍 Click board to place' : ''))}</div>
+                    <div class="movement-info">${unit.fightsFirst ? '⚡ Charges/Fights first | ' : ''}${gameState.boardMode === 'range' && onBoard ? '📏 Click board to show 3" range' : (gameState.boardMode === 'move' && onBoard ? '🏃 Click to move (max 3")' : (gameState.boardMode === 'place' ? '📍 Click board to place' : ''))}</div>
                 `;
                 list.appendChild(card);
             });
