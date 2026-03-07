@@ -1141,6 +1141,7 @@
                 <div class="board-overlay">
                     <span>⚔️ WTC 2025/26</span>
                     <span id="boardTurn">Turn 1</span>
+                    <span style="font-size: 0.65rem; color: #888;">Click objectives to toggle control ✓/✗</span>
                 </div>
                 <div class="board-controls">
                     <button id="btnPlace" onclick="setBoardMode('place')">📍 Place Unit</button>
@@ -1204,6 +1205,14 @@
                 <strong>WTC Rules:</strong><br>
                 5 Rounds • 3 Hours<br>
                 Win: 20BP • Draw: 15BP • Loss: 12BP
+            </div>
+            
+            <div class="objective-legend" style="margin: 10px 0; padding: 8px; background: #252525; border-radius: 4px; font-size: 0.7rem;">
+                <strong>🎯 Objective Control:</strong><br>
+                <span style="color: #2a9d8f;">✓ Green</span> = You control<br>
+                <span style="color: #c92a2a;">✗ Red</span> = Enemy controls<br>
+                <span style="color: #666;">⚪ None</span> = Uncontested<br>
+                <em style="color: #888;">Click objective on board to toggle</em>
             </div>
             
             <div class="phase-display">
@@ -1671,19 +1680,34 @@
             }
         }
         
-        // Initialize
-        function init() {
-            loadArmy();
-            loadMission();
-            loadSecondaries();
-            loadQuickEnhancements();
-            loadEnhancements();
+        // Objective Control Tracking
+        let objectiveControl = {
+            0: null, // player, enemy, or null
+            1: null,
+            2: null,
+            3: null,
+            4: null
+        };
+
+        function toggleObjectiveControl(objIdx) {
+            const states = [null, 'player', 'enemy'];
+            const current = objectiveControl[objIdx];
+            const currentIdx = states.indexOf(current);
+            const nextIdx = (currentIdx + 1) % states.length;
+            objectiveControl[objIdx] = states[nextIdx];
             drawBoard();
-            updateUI();
-            loadGameState();
-            
-            // Hide deep strike panel initially
-            document.getElementById('deepStrikePanel').style.display = 'none';
+            saveGameState();
+        }
+
+        function loadObjectiveControl() {
+            const saved = localStorage.getItem('wh40k_objectives');
+            if (saved) {
+                objectiveControl = JSON.parse(saved);
+            }
+        }
+
+        function saveObjectiveControl() {
+            localStorage.setItem('wh40k_objectives', JSON.stringify(objectiveControl));
         }
         
         // Army Functions
@@ -2515,7 +2539,8 @@
                 turn: gameState.turn,
                 phase: gameState.phase,
                 cp: gameState.cp,
-                unitsOnBoard: gameState.unitsOnBoard
+                unitsOnBoard: gameState.unitsOnBoard,
+                objectiveControl: objectiveControl
             };
             localStorage.setItem('wh40k_game', JSON.stringify(state));
         }
@@ -2530,6 +2555,10 @@
                 gameState.cp = state.cp;
                 gameState.unitsOnBoard = state.unitsOnBoard || [];
                 
+                if (state.objectiveControl) {
+                    objectiveControl = state.objectiveControl;
+                }
+                
                 document.getElementById('roundNum').textContent = gameState.round;
                 document.getElementById('turnNum').textContent = gameState.turn;
                 document.getElementById('cpCount').textContent = gameState.cp;
@@ -2540,6 +2569,7 @@
         function resetGame() {
             if (confirm('Reset entire game?')) {
                 gameState = { round: 1, turn: 1, phase: 'command', cp: 1, army: gameState.army, selectedUnit: null, unitsOnBoard: [], boardMode: null };
+                objectiveControl = { 0: null, 1: null, 2: null, 3: null, 4: null };
                 localStorage.removeItem('wh40k_game');
                 updateUI();
                 drawBoard();
@@ -2606,16 +2636,34 @@
             objectives.forEach((obj, i) => {
                 ctx.beginPath();
                 ctx.arc(obj.x, obj.y, 20, 0, Math.PI * 2);
-                ctx.fillStyle = i === 4 ? 'rgba(255, 215, 0, 0.3)' : 'rgba(255, 255, 255, 0.1)';
+                
+                // Color based on control status
+                const control = objectiveControl[i];
+                if (control === 'player') {
+                    ctx.fillStyle = 'rgba(42, 157, 143, 0.4)';  // Green for player
+                    ctx.strokeStyle = '#2a9d8f';
+                } else if (control === 'enemy') {
+                    ctx.fillStyle = 'rgba(201, 42, 42, 0.4)';  // Red for enemy
+                    ctx.strokeStyle = '#c92a2a';
+                } else {
+                    ctx.fillStyle = i === 4 ? 'rgba(255, 215, 0, 0.3)' : 'rgba(255, 255, 255, 0.1)';
+                    ctx.strokeStyle = i === 4 ? '#ffd700' : '#666';
+                }
+                
                 ctx.fill();
-                ctx.strokeStyle = i === 4 ? '#ffd700' : '#666';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = control ? 4 : 2;
                 ctx.stroke();
                 
-                ctx.fillStyle = '#888';
+                ctx.fillStyle = control ? '#fff' : '#888';
                 ctx.font = '12px Arial';
                 ctx.textAlign = 'center';
                 ctx.fillText(i + 1, obj.x, obj.y + 4);
+                
+                // Show control indicator
+                if (control) {
+                    ctx.font = '10px Arial';
+                    ctx.fillText(control === 'player' ? '✓' : '✗', obj.x, obj.y - 25);
+                }
             });
             
             // Draw units on board
@@ -2738,11 +2786,31 @@
         
         // Canvas Click Handler
         document.getElementById('gameCanvas').addEventListener('click', function(e) {
-            if (!gameState.boardMode || gameState.selectedUnit === null) return;
-            
             const rect = this.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
+            
+            // Check if clicking on objectives (when not in board mode)
+            if (!gameState.boardMode) {
+                const objectives = [
+                    { x: 150, y: 250 },
+                    { x: 300, y: 100 },
+                    { x: 300, y: 400 },
+                    { x: 450, y: 250 },
+                    { x: 300, y: 250 }
+                ];
+                
+                for (let i = 0; i < objectives.length; i++) {
+                    const obj = objectives[i];
+                    const dist = Math.sqrt(Math.pow(x - obj.x, 2) + Math.pow(y - obj.y, 2));
+                    if (dist <= 20) {
+                        toggleObjectiveControl(i);
+                        return;
+                    }
+                }
+            }
+            
+            if (!gameState.boardMode || gameState.selectedUnit === null) return;
             
             const existingIdx = gameState.unitsOnBoard.findIndex(u => u.unitIndex === gameState.selectedUnit);
             
@@ -2928,6 +2996,20 @@
         };
         
         // Initialize
+        function init() {
+            loadArmy();
+            loadMission();
+            loadSecondaries();
+            loadQuickEnhancements();
+            loadEnhancements();
+            loadObjectiveControl();
+            drawBoard();
+            updateUI();
+            loadGameState();
+            
+            // Hide deep strike panel initially
+            document.getElementById('deepStrikePanel').style.display = 'none';
+        }
         init();
     </script>
 </body>
