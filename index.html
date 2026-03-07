@@ -629,9 +629,12 @@
             
             <div class="army-templates">
                 <button class="template-btn" onclick="loadTemplate('custodes')">🛡️ Custodes</button>
-                <button class="template-btn" onclick="loadTemplate('spacemarines')">⚔️ Space Marines</button>
-                <button class="template-btn" onclick="loadTemplate('darkangels')">🔱 Dark Angels</button>
+                <button class="template-btn" onclick="loadTemplate('spacemarines')">⚔️ SM</button>
+                <button class="template-btn" onclick="loadTemplate('darkangels')">🔱 DAngels</button>
                 <button class="template-btn" onclick="loadTemplate('orks')">🐗 Orks</button>
+                <button class="template-btn" onclick="loadTemplate('tyranids')">🧬 Tyranids</button>
+                <button class="template-btn" onclick="loadTemplate('deathguard')">☠️ Death Guard</button>
+                <button class="template-btn" onclick="loadTemplate('tau')">🔵 Tau</button>
             </div>
 
             <div class="mission-select">
@@ -813,14 +816,31 @@
                 </div>
             </div>
             
-            <h2>🎯 Objectives</h2>
-            <div class="objectives">
-                <div class="objective" data-obj="1" onclick="toggleObj(this)">No Prisoners</div>
-                <div class="objective" data-obj="2" onclick="toggleObj(this)">Purge the Wicked</div>
-                <div class="objective" data-obj="3" onclick="toggleObj(this)">Extend Battle Lines</div>
-                <div class="objective" data-obj="4" onclick="toggleObj(this)">Behind Enemy Lines</div>
-                <div class="objective" data-obj="5" onclick="toggleObj(this)">Engage on All Fronts</div>
-                <div class="objective" data-obj="6" onclick="toggleObj(this)">Area Denial</div>
+            <h2>🎯 WTC Secondaries</h2>
+            <div class="objectives" id="wtcSecondaries">
+                <div class="objective" data-sec="no-prisoners" onclick="selectSecondary(this, 'no-prisoners')">
+                    <strong>No Prisoners</strong><br><span style="font-size:0.65rem">2/3/5 VP per unit type</span>
+                </div>
+                <div class="objective" data-sec="purge" onclick="selectSecondary(this, 'purge')">
+                    <strong>Purge the Wicked</strong><br><span style="font-size:0.65rem">3/5/8 VP per enemy unit</span>
+                </div>
+                <div class="objective" data-sec="battle-lines" onclick="selectSecondary(this, 'battle-lines')">
+                    <strong>Extend Battle Lines</strong><br><span style="font-size:0.65rem">2 VP each 3 units</span>
+                </div>
+                <div class="objective" data-sec="behind-lines" onclick="selectSecondary(this, 'behind-lines')">
+                    <strong>Behind Enemy Lines</strong><br><span style="font-size:0.65rem">3 VP if 2+ units in enemy DZ</span>
+                </div>
+                <div class="objective" data-sec="engage" onclick="selectSecondary(this, 'engage')">
+                    <strong>Engage on All Fronts</strong><br><span style="font-size:0.65rem">2/3/5 VP by board quarters</span>
+                </div>
+                <div class="objective" data-sec="area-denial" onclick="selectSecondary(this, 'area-denial')">
+                    <strong>Area Denial</strong><br><span style="font-size:0.65rem">2 VP per destroyed deep strike</span>
+                </div>
+            </div>
+            
+            <div class="selected-secondaries" style="margin-top:10px; font-size:0.75rem;">
+                <div style="color:var(--gold); margin-bottom:5px;">Selected Secondaries:</div>
+                <div id="selectedSecList" style="color:var(--text-dim);">None</div>
             </div>
             
             <div class="btn-group">
@@ -926,6 +946,42 @@
                 { name: 'Boyz', pts: 65, models: 10, ws: 4, bs: 4, s: 4, t: 4, w: 1, ld: 6, sv: 6, weapons: 'Choppa (S, AP-1, 1)' },
                 { name: 'Deffkoptas', pts: 75, models: 2, ws: 4, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 5, weapons: 'KMB (18", S7, AP-2, D3)' },
                 { name: 'Killa Kans', pts: 75, models: 3, ws: 4, bs: 4, s: 5, t: 5, w: 4, ld: 6, sv: 4, weapons: 'Grot Blasta (18", S7, AP-1, D2)' }
+            ],
+            tyranids: [
+                { name: 'Hive Tyrant', pts: 195, models: 1, ws: 2, bs: 2, s: 6, t: 6, w: 8, ld: 6, sv: 3, weapons: 'Monstrous Bonesword (S+2, AP-3, D3)' },
+                { name: 'Neurotyrant', pts: 125, models: 1, ws: 3, bs: 3, s: 5, t: 5, w: 7, ld: 7, sv: 4, weapons: 'Psychic Scream (S5, AP-2, D2)' },
+                { name: 'Tyrant Guard', pts: 80, models: 3, ws: 3, bs: 3, s: 5, t: 5, w: 4, ld: 6, sv: 3, weapons: 'Rending Claws (S+1, AP-2, 2)' },
+                { name: 'Zoanthropes', pts: 110, models: 3, ws: 4, bs: 4, s: 5, t: 4, w: 3, ld: 6, sv: 5, weapons: 'Psychic (S6, AP-2, D3)' },
+                { name: 'Biovores', pts: 50, models: 1, ws: 4, bs: 3, s: 4, t: 4, w: 3, ld: 6, sv: 5, weapons: 'Spore Mine (36", S4, AP-1, 1)' },
+                { name: 'Mawloc', pts: 130, models: 1, ws: 3, bs: 4, s: 6, t: 5, w: 10, ld: 6, sv: 3, weapons: 'Tusks (S+2, AP-2, D3)' },
+                { name: 'Trygon', pts: 170, models: 1, ws: 3, bs: 4, s: 6, t: 6, w: 9, ld: 6, sv: 3, weapons: 'Bio-electric (S+1, AP-2, D3)' },
+                { name: 'Gargoyles', pts: 80, models: 10, ws: 4, bs: 4, s: 3, t: 3, w: 2, ld: 5, sv: 6, weapons: 'Blinding Breath (12", S3, AP-1, 1)' },
+                { name: 'Hormagaunts', pts: 65, models: 20, ws: 4, bs: 4, s: 3, t: 3, w: 1, ld: 5, sv: 6, weapons: 'Scything Talons (S, AP-1, 1)' },
+                { name: 'Termagants', pts: 60, models: 20, ws: 4, bs: 4, s: 3, t: 3, w: 1, ld: 5, sv: 6, weapons: 'Fleshborer (12", S4, AP-1, 1)' }
+            ],
+            deathguard: [
+                { name: 'Death Guard Lord', pts: 100, models: 1, ws: 3, bs: 3, s: 5, t: 6, w: 6, ld: 7, sv: 2, weapons: 'Plague Combat Weapon (S+1, AP-2, D2)' },
+                { name: 'Mortarion', pts: 250, models: 1, ws: 2, bs: 2, s: 7, t: 7, w: 10, ld: 6, sv: 2, weapons: 'Silence & Scourge (S+2, AP-3, D3)' },
+                { name: 'Death Guard Sorcerer', pts: 95, models: 1, ws: 3, bs: 3, s: 4, t: 5, w: 5, ld: 7, sv: 3, weapons: 'Plague Sword (S+1, AP-2, D2)' },
+                { name: 'Plague Marines', pts: 120, models: 7, ws: 3, bs: 3, s: 4, t: 5, w: 2, ld: 7, sv: 3, weapons: 'Plague Bolter (12", S4, AP-1, 1)' },
+                { name: 'Plague Marines', pts: 55, models: 3, ws: 3, bs: 3, s: 4, t: 5, w: 2, ld: 7, sv: 3, weapons: 'Plague Bolter (12", S4, AP-1, 1)' },
+                { name: 'Death Shroud', pts: 150, models: 3, ws: 3, bs: 3, s: 5, t: 5, w: 3, ld: 7, sv: 2, weapons: 'Manreaper (S+1, AP-3, D3)' },
+                { name: 'Blightlord Terminators', pts: 195, models: 5, ws: 3, bs: 3, s: 5, t: 5, w: 3, ld: 7, sv: 2, weapons: 'Combi-weapon (24", S4, AP-1, 1)' },
+                { name: 'Foetid Bloat-drone', pts: 120, models: 1, ws: 4, bs: 3, s: 6, t: 7, w: 8, ld: 6, sv: 3, weapons: 'Fleshmower (S+2, AP-2, 2)' },
+                { name: 'Myphitic Blight-hauler', pts: 110, models: 1, ws: 4, bs: 3, s: 6, t: 7, w: 9, ld: 6, sv: 3, weapons: 'Multi-melta (24", S8, AP-3, D6)' },
+                { name: 'Poxwalkers', pts: 50, models: 20, ws: 4, bs: 5, s: 3, t: 3, w: 1, ld: 6, sv: 7, weapons: 'Pox Cutter (S+1, AP-1, 1)' }
+            ],
+            tau: [
+                { name: 'Ethereal', pts: 80, models: 1, ws: 4, bs: 3, s: 2, t: 3, w: 5, ld: 8, sv: 5, weapons: 'Honour Blade (S+1, AP-2, D2)' },
+                { name: 'Commander in Enforcer', pts: 100, models: 1, ws: 3, bs: 2, s: 4, t: 4, w: 5, ld: 6, sv: 3, weapons: 'Cyclic Ion Blaster (18", S5, AP-2, D3)' },
+                { name: 'Commander in Crisis', pts: 90, models: 1, ws: 3, bs: 2, s: 4, t: 4, w: 4, ld: 6, sv: 3, weapons: 'Cyclic Ion Blaster (18", S5, AP-2, D3)' },
+                { name: 'Stealth Battlesuits', pts: 75, models: 3, ws: 4, bs: 4, s: 4, t: 4, w: 3, ld: 6, sv: 4, weapons: 'Burst Cannon (18", S5, AP-1, 1)' },
+                { name: 'Ghostkeel', pts: 150, models: 1, ws: 4, bs: 4, s: 5, t: 6, w: 9, ld: 6, sv: 4, weapons: 'Fusion Collider (18", S8, AP-3, D6)' },
+                { name: 'Broadside Battlesuits', pts: 145, models: 2, ws: 4, bs: 4, s: 5, t: 5, w: 4, ld: 6, sv: 3, weapons: 'High-yield Missiles (48", S8, AP-2, D6)' },
+                { name: 'Breacher Team', pts: 90, models: 10, ws: 4, bs: 4, s: 3, t: 3, w: 2, ld: 6, sv: 5, weapons: 'Pulse Blaster (12", S5, AP-1, 1)' },
+                { name: 'Kroot Carnivores', pts: 60, models: 20, ws: 4, bs: 4, s: 3, t: 3, w: 1, ld: 5, sv: 6, weapons: 'Close Combat (S, AP-1, 1)' },
+                { name: 'Devilfish', pts: 110, models: 1, ws: 4, bs: 3, s: 5, t: 6, w: 10, ld: 6, sv: 4, weapons: 'Burst Cannon (18", S5, AP-1, 1)' },
+                { name: 'Riptide', pts: 180, models: 1, ws: 4, bs: 3, s: 6, t: 6, w: 14, ld: 6, sv: 3, weapons: 'Ion Accelerator (30", S7, AP-2, D3)' }
             ]
         };
 
@@ -945,6 +1001,7 @@
         function init() {
             loadArmy();
             loadMission();
+            loadSecondaries();
             drawBoard();
             updateUI();
             loadGameState();
@@ -1385,7 +1442,68 @@
             input.addEventListener('change', updateScore);
         });
         
-        // Objectives
+        // WTC Secondary Objectives
+        let selectedSecondaries = [];
+        
+        function selectSecondary(el, secId) {
+            const secList = document.getElementById('selectedSecList');
+            
+            if (selectedSecondaries.includes(secId)) {
+                // Deselect
+                selectedSecondaries = selectedSecondaries.filter(s => s !== secId);
+                el.classList.remove('selected');
+            } else {
+                // Select (max 3)
+                if (selectedSecondaries.length >= 3) {
+                    alert('Maximum 3 secondaries allowed!');
+                    return;
+                }
+                selectedSecondaries.push(secId);
+                el.classList.add('selected');
+            }
+            
+            // Update display
+            if (selectedSecondaries.length === 0) {
+                secList.textContent = 'None';
+            } else {
+                const names = {
+                    'no-prisoners': 'No Prisoners',
+                    'purge': 'Purge the Wicked', 
+                    'battle-lines': 'Extend Battle Lines',
+                    'behind-lines': 'Behind Enemy Lines',
+                    'engage': 'Engage on All Fronts',
+                    'area-denial': 'Area Denial'
+                };
+                secList.textContent = selectedSecondaries.map(s => names[s]).join(', ');
+            }
+            
+            // Save
+            localStorage.setItem('wh40k_secondaries', JSON.stringify(selectedSecondaries));
+        }
+        
+        function loadSecondaries() {
+            const saved = localStorage.getItem('wh40k_secondaries');
+            if (saved) {
+                selectedSecondaries = JSON.parse(saved);
+                selectedSecondaries.forEach(secId => {
+                    const el = document.querySelector(`[data-sec="${secId}"]`);
+                    if (el) el.classList.add('selected');
+                });
+                if (selectedSecondaries.length > 0) {
+                    const names = {
+                        'no-prisoners': 'No Prisoners',
+                        'purge': 'Purge the Wicked', 
+                        'battle-lines': 'Extend Battle Lines',
+                        'behind-lines': 'Behind Enemy Lines',
+                        'engage': 'Engage on All Fronts',
+                        'area-denial': 'Area Denial'
+                    };
+                    document.getElementById('selectedSecList').textContent = selectedSecondaries.map(s => names[s]).join(', ');
+                }
+            }
+        }
+        
+        // Legacy toggle for compatibility
         function toggleObj(el) {
             el.classList.toggle('selected');
             el.classList.toggle('complete');
