@@ -1102,6 +1102,92 @@
         .cover-result.heavy { color: var(--success); border: 1px solid var(--success); }
         .cover-result.light { color: #60a5fa; border: 1px solid #60a5fa; }
         .cover-result.none { color: var(--danger); }
+        
+        /* Expected Damage Calculator */
+        .expected-damage-calc {
+            margin-top: 15px;
+            padding: 10px;
+            background: #252525;
+            border-radius: 4px;
+            border-left: 3px solid #f59e0b;
+        }
+
+        .expected-damage-calc h4 {
+            font-size: 0.8rem;
+            color: #f59e0b;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .expected-damage-calc label {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .expected-damage-calc select,
+        .expected-damage-calc input {
+            width: 100%;
+            background: #333;
+            color: var(--text);
+            border: 1px solid #444;
+            padding: 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-bottom: 8px;
+        }
+
+        .expected-damage-calc .result-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid #333;
+            font-size: 0.75rem;
+        }
+
+        .expected-damage-calc .result-row:last-child {
+            border-bottom: none;
+        }
+
+        .expected-damage-calc .result-row .label {
+            color: var(--text-dim);
+        }
+
+        .expected-damage-calc .result-row .value {
+            font-weight: bold;
+        }
+
+        .expected-damage-calc .result-row .value.hits { color: var(--phase-shooting); }
+        .expected-damage-calc .result-row .value.wounds { color: var(--danger); }
+        .expected-damage-calc .result-row .value.saves { color: var(--success); }
+        .expected-damage-calc .result-row .value.damage { color: var(--gold); font-size: 0.85rem; }
+
+        .expected-damage-calc .total-expected {
+            text-align: center;
+            padding: 10px;
+            background: #1a1a1a;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+
+        .expected-damage-calc .total-expected .label {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+        }
+
+        .expected-damage-calc .total-expected .value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--gold);
+        }
+
+        .expected-damage-calc .probability {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+        }
     </style>
 
         /* Enhancement Panel */
@@ -1699,6 +1785,110 @@
                 </div>
                 
                 <button class="btn-small" style="width: 100%; margin-top: 8px;" onclick="clearAllTerrain()">🗑️ Clear All Terrain</button>
+            </div>
+
+            <!-- Expected Damage Calculator -->
+            <div class="expected-damage-calc">
+                <h4>📊 Expected Damage Calculator</h4>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div>
+                        <label>Attacks</label>
+                        <input type="number" id="calcAttacks" value="6" min="1" max="50">
+                    </div>
+                    <div>
+                        <label>BS/WS</label>
+                        <select id="calcBS">
+                            <option value="2">2+</option>
+                            <option value="3" selected>3+</option>
+                            <option value="4">4+</option>
+                            <option value="5">5+</option>
+                            <option value="6">6+</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Strength</label>
+                        <input type="number" id="calcS" value="5" min="1" max="12">
+                    </div>
+                    <div>
+                        <label>AP</label>
+                        <select id="calcAP">
+                            <option value="0">0</option>
+                            <option value="-1" selected>-1</option>
+                            <option value="-2">-2</option>
+                            <option value="-3">-3</option>
+                            <option value="-4">-4</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Damage</label>
+                        <input type="number" id="calcD" value="2" min="1" max="12">
+                    </div>
+                    <div>
+                        <label>Rerolls</label>
+                        <select id="calcReroll">
+                            <option value="none">None</option>
+                            <option value="1s">Reroll 1s</option>
+                            <option value="failed">Reroll Failed</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+                    <div>
+                        <label>Target Toughness</label>
+                        <input type="number" id="calcT" value="4" min="1" max="10">
+                    </div>
+                    <div>
+                        <label>Target Save</label>
+                        <select id="calcSv">
+                            <option value="2">2+</option>
+                            <option value="3">3+</option>
+                            <option value="4" selected>4+</option>
+                            <option value="5">5+</option>
+                            <option value="6">6+</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 10px;">
+                    <label>Cover</label>
+                    <select id="calcCover" onchange="calculateExpectedDamage()">
+                        <option value="none">No Cover</option>
+                        <option value="light">Light (+1)</option>
+                        <option value="heavy">Heavy (+2)</option>
+                    </select>
+                </div>
+                
+                <button class="attack-btn" style="width: 100%; background: #f59e0b; color: #000; margin-top: 10px; padding: 10px;" onclick="calculateExpectedDamage()">🎯 Calculate Expected Damage</button>
+                
+                <div id="expectedResults" style="margin-top: 12px;">
+                    <div class="result-row">
+                        <span class="label">Expected Hits:</span>
+                        <span class="value hits" id="expHits">-</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="label">Hit %:</span>
+                        <span class="value hits probability" id="expHitPct">-</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="label">Expected Wounds:</span>
+                        <span class="value wounds" id="expWounds">-</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="label">Wound %:</span>
+                        <span class="value wounds probability" id="expWoundPct">-</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="label">Expected Damage:</span>
+                        <span class="value damage" id="expDamage">-</span>
+                    </div>
+                </div>
+                
+                <div class="total-expected">
+                    <div class="label">TOTAL EXPECTED DAMAGE</div>
+                    <div class="value" id="totalExpected">-</div>
+                </div>
             </div>
         </div>
     </div>
@@ -4163,6 +4353,72 @@
                 panel.style.display = 'none';
             }
         };
+        
+        // Expected Damage Calculator
+        function calculateExpectedDamage() {
+            const attacks = parseInt(document.getElementById('calcAttacks').value) || 1;
+            const bs = parseInt(document.getElementById('calcBS').value);
+            const s = parseInt(document.getElementById('calcS').value);
+            const ap = parseInt(document.getElementById('calcAP').value);
+            const d = parseInt(document.getElementById('calcD').value);
+            const reroll = document.getElementById('calcReroll').value;
+            const targetT = parseInt(document.getElementById('calcT').value);
+            const targetSv = parseInt(document.getElementById('calcSv').value);
+            const cover = document.getElementById('calcCover').value;
+            
+            // Calculate hit probability
+            let hitProb = (7 - bs) / 6; // e.g., 3+ = 4/6 = 0.667
+            
+            // Apply rerolls
+            if (reroll === '1s') {
+                // Reroll 1s: probability of hitting = 1 - (1/6 * 1/6) = 35/36
+                hitProb = 35 / 36 - (1 - hitProb) * (1/36);
+                hitProb = hitProb; // Simplified: reroll 1s increases hit rate
+                // Actually: chance to hit with reroll 1s = 1 - (1/6 * 1/6) = 35/36 ≈ 97.2%
+                hitProb = (35/36);
+            } else if (reroll === 'failed') {
+                // Reroll failed: expected = 1 - (misses * misses) = 1 - ((1-p)^2)
+                const miss = 1 - hitProb;
+                hitProb = 1 - (miss * miss);
+            }
+            
+            // Wound probability: S vs T
+            let woundThreshold = 0;
+            if (s > targetT + 1) woundThreshold = 2;
+            else if (s > targetT) woundThreshold = 3;
+            else if (s === targetT) woundThreshold = 4;
+            else if (s < targetT) woundThreshold = 5;
+            else if (s < targetT - 1) woundThreshold = 6;
+            
+            const woundProb = Math.max(0, Math.min(1, (7 - woundThreshold) / 6));
+            
+            // Save probability: Modified save
+            let modifiedSv = targetSv - ap;
+            if (cover === 'light') modifiedSv -= 1;
+            else if (cover === 'heavy') modifiedSv -= 2;
+            
+            // Clamp to 7 (auto-fail)
+            modifiedSv = Math.min(7, modifiedSv);
+            
+            // Save succeeds on >= modifiedSv
+            const saveProb = Math.max(0, (modifiedSv - 1) / 6);
+            
+            // Failed save probability
+            const failSaveProb = 1 - saveProb;
+            
+            // Expected values
+            const expectedHits = attacks * hitProb;
+            const expectedWounds = expectedHits * woundProb;
+            const expectedDamage = expectedWounds * failSaveProb * d;
+            
+            // Update UI
+            document.getElementById('expHits').textContent = expectedHits.toFixed(1);
+            document.getElementById('expHitPct').textContent = (hitProb * 100).toFixed(1) + '%';
+            document.getElementById('expWounds').textContent = expectedWounds.toFixed(1);
+            document.getElementById('expWoundPct').textContent = (woundProb * 100).toFixed(1) + '%';
+            document.getElementById('expDamage').textContent = (expectedWounds * failSaveProb).toFixed(1) + ' MW';
+            document.getElementById('totalExpected').textContent = expectedDamage.toFixed(1);
+        }
         
         // Initialize
         function init() {
