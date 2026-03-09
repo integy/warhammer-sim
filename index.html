@@ -118,6 +118,94 @@
         .phase.fight { background: var(--phase-fight); color: #000; }
         .phase.morale { background: var(--phase-morale); }
         
+        /* Psychic Phase Styles */
+        .phase.psychic { background: #9c27b0; }
+        
+        .psychic-panel {
+            margin-top: 15px;
+            padding: 10px;
+            background: #252525;
+            border-radius: 4px;
+            border-left: 3px solid #9c27b0;
+        }
+
+        .psychic-panel h4 {
+            font-size: 0.8rem;
+            color: #9c27b0;
+            margin-bottom: 8px;
+        }
+
+        .psychic-powers {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .psychic-power {
+            background: #1a1a1a;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            border: 1px solid #333;
+        }
+
+        .psychic-power:hover { border-color: #9c27b0; }
+        .psychic-power.manifested { background: #1d2d1d; border-color: var(--success); }
+
+        .psychic-power-name { color: #ce93d8; font-weight: bold; }
+        .psychic-power-details { color: var(--text-dim); font-size: 0.65rem; margin-top: 3px; }
+
+        .psychic-test-result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #1a1a1a;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+
+        .psychic-test-result.success { color: #9c27b0; border: 1px solid #9c27b0; }
+        .psychic-test-result.fail { color: var(--danger); border: 1px solid var(--danger); }
+
+        .deny-btn {
+            background: var(--success);
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            flex: 1;
+        }
+
+        .deny-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .deny-controls input {
+            flex: 1;
+            background: #333;
+            color: var(--text);
+            border: 1px solid #444;
+            padding: 6px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .wc-display {
+            display: inline-block;
+            background: #9c27b0;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            margin-left: 5px;
+        }
+        
         /* Dice Roller */
         .dice-section {
             text-align: center;
@@ -1210,6 +1298,17 @@
                 <span id="enhancementPoints" style="margin-left: 10px; color: #9c27b0;"></span>
             </div>
 
+            <!-- Psychic Panel -->
+            <div class="psychic-panel" id="psychicPanel" style="display: none;">
+                <h4>🔮 Psychic Phase</h4>
+                <div class="psychic-powers" id="psychicPowers"></div>
+                <div class="deny-controls">
+                    <input type="number" id="denyLd" placeholder="Denier LD" value="10" min="1" max="10" style="width: 80px;">
+                    <button class="deny-btn" onclick="rollDenyTest()">🛡️ Deny</button>
+                </div>
+                <div class="psychic-test-result" id="psychicResult">Select a psyker unit to manifest powers</div>
+            </div>
+            
             <!-- Enhancement Panel -->
             <div class="enhancement-panel" id="enhancementPanel">
                 <h4>✨ WTC Enhancements (10th Ed)</h4>
@@ -1396,11 +1495,12 @@
                 
                 <div class="phase-track">
                     <div class="phase command active" data-phase="command" onclick="setPhase('command')">1. Command</div>
-                    <div class="phase movement" data-phase="movement" onclick="setPhase('movement')">2. Movement</div>
-                    <div class="phase shooting" data-phase="shooting" onclick="setPhase('shooting')">3. Shooting</div>
-                    <div class="phase charge" data-phase="charge" onclick="setPhase('charge')">4. Charge</div>
-                    <div class="phase fight" data-phase="fight" onclick="setPhase('fight')">5. Fight</div>
-                    <div class="phase morale" data-phase="morale" onclick="setPhase('morale')">6. Morale</div>
+                    <div class="phase psychic" data-phase="psychic" onclick="setPhase('psychic')">2. Psychic</div>
+                    <div class="phase movement" data-phase="movement" onclick="setPhase('movement')">3. Movement</div>
+                    <div class="phase shooting" data-phase="shooting" onclick="setPhase('shooting')">4. Shooting</div>
+                    <div class="phase charge" data-phase="charge" onclick="setPhase('charge')">5. Charge</div>
+                    <div class="phase fight" data-phase="fight" onclick="setPhase('fight')">6. Fight</div>
+                    <div class="phase morale" data-phase="morale" onclick="setPhase('morale')">7. Morale</div>
                 </div>
             </div>
             
@@ -1778,6 +1878,246 @@
             'Rail Rifle': { range: '36"', s: 'S10', ap: '-4', d: 'D6+1', abilities: 'Sniper' },
             'Smart Missile System': { range: '18"', s: 'S5', ap: '0', d: '1', abilities: 'Ignore Cover' }
         };
+
+        // Psychic Powers Database (WTC 10th Ed)
+        const psychicPowers = {
+            // Tyranids
+            'Neurotyrant': [
+                { name: 'Psychic Scream', wc: 5, range: 18, type: 'Mortal Wounds', effect: 'S5, AP-2, D2' },
+                { name: 'Onslaught', wc: 5, range: 18, type: 'Aura', effect: '+1 to Hit for friendly units' },
+                { name: 'Catalysm', wc: 6, range: 12, type: 'Mortal Wounds', effect: 'D3 mortals' }
+            ],
+            'Hive Tyrant': [
+                { name: 'Smite', wc: 5, range: 18, type: 'Mortal Wounds', effect: 'D3+3 mortals' },
+                { name: 'Paroxysm', wc: 6, range: 18, type: 'Debuff', effect: 'Enemy -1 to Hit' },
+                { name: 'Warp Cry', wc: 5, range: 12, type: 'Aura', effect: 'Fights First' }
+            ],
+            'Zoanthropes': [
+                { name: 'Smite', wc: 5, range: 18, type: 'Mortal Wounds', effect: 'D3+3 mortals' },
+                { name: 'Psychic Babel', wc: 6, range: 24, type: 'Buff', effect: 'Friendly unit +2 LD' }
+            ],
+            // Death Guard
+            'Mortarion': [
+                { name: 'Plague Wind', wc: 6, range: 12, type: 'Aura', effect: 'Enemies -1 to Hit' },
+                { name: 'Putrescent Breath', wc: 7, range: 12, type: 'Mortal Wounds', effect: 'D6 mortals' },
+                { name: 'Death's Release', wc: 5, range: 12, type: 'Mortal Wounds', effect: 'D3 mortals' }
+            ],
+            'Death Guard Sorcerer': [
+                { name: 'Plague of rust', wc: 5, range: 18, type: 'Debuff', effect: 'Enemy -1 Toughness' },
+                { name: 'Moulder', wc: 6, range: 18, type: 'Heal', effect: 'Heal D3 wounds' },
+                { name: 'Gift of Contagion', wc: 5, range: 12, type: 'Aura', effect: 'Enemy -1 LD' }
+            ],
+            // Dark Angels
+            'Lazarian': [
+                { name: 'Mind Wipe', wc: 7, range: 18, type: 'Debuff', effect: 'Enemy unit cannot attack' },
+                { name: 'Fear', wc: 6, range: 12, type: 'Aura', effect: 'Enemy -1 LD' },
+                { name: 'Eye of the Unseen', wc: 5, range: 12, type: 'Buff', effect: '4+ Invulnerable' }
+            ],
+            // Space Marines
+            'Librarian': [
+                { name: 'Smite', wc: 5, range: 18, type: 'Mortal Wounds', effect: 'D3+3 mortals' },
+                { name: 'Psychic Hood', wc: 5, range: 6, type: 'Defense', effect: 'Deny at +1' },
+                { name: 'Might of Heroes', wc: 6, range: Self, type: 'Buff', effect: '+2 S, +2 T, +2 W' }
+            ],
+            'Librarian in Terminator': [
+                { name: 'Fear', wc: 6, range: 12, type: 'Aura', effect: 'Enemy -1 LD' },
+                { name: 'Storm of Fire', wc: 5, range: 12, type: 'Shooting', effect: 'Reroll wounds' },
+                { name: 'Warp Shape', wc: 5, range: 12, type: 'Movement', effect: 'Unit can Fall Back' }
+            ],
+            // Tau
+            'Ethereal': [
+                { name: 'Sense of Stone', wc: 5, range: 12, type: 'Buff', effect: 'FNP 5+' },
+                { name: 'Unifying Shield', wc: 6, range: 12, type: 'Buff', effect: 'Feel No Pain 5+' },
+                { name: 'Zephyr', wc: 4, range: 12, type: 'Movement', effect: 'Unit can Fall Back and shoot' }
+            ]
+        };
+
+        // Map units to their psychic powers
+        const unitPsychicPowers = {
+            'Neurotyrant': psychicPowers['Neurotyrant'],
+            'Hive Tyrant': psychicPowers['Hive Tyrant'],
+            'Zoanthropes': psychicPowers['Zoanthropes'],
+            'Mortarion': psychicPowers['Mortarion'],
+            'Death Guard Sorcerer': psychicPowers['Death Guard Sorcerer'],
+            'Lazarian': psychicPowers['Lazarian'],
+            'Librarian': psychicPowers['Librarian'],
+            'Librarian in Terminator': psychicPowers['Librarian in Terminator'],
+            'Ethereal': psychicPowers['Ethereal'],
+            'Shadowseer': [
+                { name: 'Smite', wc: 5, range: 18, type: 'Mortal Wounds', effect: 'D3+3 mortals' },
+                { name: 'Mirror of Minds', wc: 6, range: 18, type: 'Debuff', effect: 'Enemy -1 to Hit' },
+                { name: 'Fool's Errand', wc: 5, range: 12, type: 'Utility', effect: 'Enemy cannot Overwatch' }
+            ]
+        };
+
+        // Track manifested powers
+        let manifestedPowers = {}; // { unitName: [powerNames] }
+
+        function isPsyker(unitName) {
+            return Object.keys(unitPsychicPowers).some(key => unitName.toLowerCase().includes(key.toLowerCase()));
+        }
+
+        function getPsychicPowers(unitName) {
+            for (const [key, powers] of Object.entries(unitPsychicPowers)) {
+                if (unitName.toLowerCase().includes(key.toLowerCase())) {
+                    return powers;
+                }
+            }
+            return [];
+        }
+
+        function updatePsychicPanel() {
+            const panel = document.getElementById('psychicPanel');
+            const powersDiv = document.getElementById('psychicPowers');
+            const resultDiv = document.getElementById('psychicResult');
+            
+            if (gameState.phase !== 'psychic') {
+                panel.style.display = 'none';
+                return;
+            }
+            
+            panel.style.display = 'block';
+            
+            // Find psyker units on board
+            const psykerUnits = [];
+            gameState.unitsOnBoard.forEach((u, idx) => {
+                const unit = gameState.army[u.unitIndex];
+                if (unit && isPsyker(unit.name)) {
+                    psykerUnits.push({ ...u, unit, boardIdx: idx });
+                }
+            });
+            
+            if (psykerUnits.length === 0) {
+                powersDiv.innerHTML = '<div style="color: var(--text-dim); font-size: 0.75rem; font-style: italic;">No psyker units on board</div>';
+                resultDiv.textContent = 'Place a psyker on the board';
+                return;
+            }
+            
+            // Show selected psyker's powers
+            let selectedPsyker = null;
+            if (gameState.selectedUnit !== null) {
+                const onBoard = gameState.unitsOnBoard.find(u => u.unitIndex === gameState.selectedUnit);
+                if (onBoard) {
+                    const unit = gameState.army[gameState.selectedUnit];
+                    if (unit && isPsyker(unit.name)) {
+                        selectedPsyker = { ...onBoard, unit, boardIdx: gameState.unitsOnBoard.indexOf(onBoard) };
+                    }
+                }
+            }
+            
+            if (!selectedPsyker) {
+                powersDiv.innerHTML = '<div style="color: var(--text-dim); font-size: 0.75rem;">Select a psyker unit to manifest powers</div>';
+                resultDiv.textContent = 'Click a psyker unit to select';
+                return;
+            }
+            
+            const powers = getPsychicPowers(selectedPsyker.unit.name);
+            const unitManifested = manifestedPowers[selectedPsyker.unit.name] || [];
+            
+            if (powers.length === 0) {
+                powersDiv.innerHTML = '<div style="color: var(--text-dim); font-size: 0.75rem;">No psychic powers available</div>';
+                return;
+            }
+            
+            let html = '';
+            powers.forEach((power, idx) => {
+                const manifested = unitManifested.includes(power.name);
+                html += `
+                    <div class="psychic-power ${manifested ? 'manifested' : ''}" onclick="manifestPower('${selectedPsyker.unit.name}', '${power.name}', ${power.wc})">
+                        <div class="psychic-power-name">${power.name} <span class="wc-display">WC${power.wc}+</span></div>
+                        <div class="psychic-power-details">${power.range === 'Self' ? 'Self' : power.range + '"'} | ${power.type}</div>
+                        <div class="psychic-power-details" style="color: var(--gold);">${power.effect}</div>
+                    </div>
+                `;
+            });
+            
+            powersDiv.innerHTML = html;
+            resultDiv.textContent = `${selectedPsyker.unit.name} - Select a power to manifest`;
+            resultDiv.className = 'psychic-test-result';
+        }
+
+        function manifestPower(unitName, powerName, wc) {
+            // Check if already manifested
+            if (!manifestedPowers[unitName]) {
+                manifestedPowers[unitName] = [];
+            }
+            
+            if (manifestedPowers[unitName].includes(powerName)) {
+                alert('Power already manifested this turn!');
+                return;
+            }
+            
+            // Roll psychic test
+            const roll = Math.floor(Math.random() * 6) + 1;
+            const total = roll + getPsychicBonus(unitName);
+            
+            const resultDiv = document.getElementById('psychicResult');
+            
+            if (total >= wc) {
+                // Success
+                manifestedPowers[unitName].push(powerName);
+                resultDiv.innerHTML = `
+                    <strong>✅ MANIFESTED!</strong><br>
+                    Roll: ${roll} + ${getPsychicBonus(unitName)} = ${total} vs WC${wc}+<br>
+                    <strong>${powerName} takes effect!</strong>
+                `;
+                resultDiv.className = 'psychic-test-result success';
+            } else {
+                // Perils of the Warp!
+                let perilsMsg = '';
+                if (roll === 1) {
+                    const perilRoll = Math.floor(Math.random() * 6) + 1;
+                    const perils = [1, 1, 2, 2, 3, 3][perilRoll - 1];
+                    perilsMsg = `<br><strong style="color: var(--danger)">⚠️ PERILS OF THE WARP! ${perils} mortal wounds!</strong>`;
+                }
+                
+                resultDiv.innerHTML = `
+                    <strong>❌ FAILED</strong><br>
+                    Roll: ${roll} + ${getPsychicBonus(unitName)} = ${total} < WC${wc}${perilsMsg}
+                `;
+                resultDiv.className = 'psychic-test-result fail';
+            }
+            
+            updatePsychicPanel();
+            saveGameState();
+        }
+
+        function getPsychicBonus(unitName) {
+            // Add any psychic bonuses from enhancements or abilities
+            // For now, return 0 - could be modified by enhancements
+            return 0;
+        }
+
+        function rollDenyTest() {
+            const denyLd = parseInt(document.getElementById('denyLd').value) || 10;
+            const roll = Math.floor(Math.random() * 6) + 1;
+            
+            const resultDiv = document.getElementById('psychicResult');
+            
+            // Deny succeeds on 4+ modified (unchanged from 10th ed)
+            const success = roll >= 4;
+            
+            if (success) {
+                resultDiv.innerHTML = `
+                    <strong>🛡️ DENIED!</strong><br>
+                    Roll: ${roll} vs 4+ needed<br>
+                    <strong>Psychic power denied!</strong>
+                `;
+                resultDiv.className = 'psychic-test-result success';
+            } else {
+                resultDiv.innerHTML = `
+                    <strong>❌ DENY FAILED</strong><br>
+                    Roll: ${roll} < 4<br>
+                    <strong>Psychic power manifests!</strong>
+                `;
+                resultDiv.className = 'psychic-test-result fail';
+            }
+        }
+
+        // Reset psychic powers at start of round
+        function resetPsychicPowers() {
+            manifestedPowers = {};
+        }
 
         // WTC Missions
         const wtcMissions = {
@@ -2352,6 +2692,9 @@
             drawBoard();
             updateWeaponPanel();
             updateWeaponRef();
+            if (gameState.phase === 'psychic') {
+                updatePsychicPanel();
+            }
         }
         
         // Update Weapon Reference Panel
@@ -2938,17 +3281,24 @@
                 document.getElementById('fightActivation').style.display = 'none';
             }
             
+            // Update psychic panel when entering psychic phase
+            if (phase === 'psychic') {
+                resetPsychicPowers();
+                updatePsychicPanel();
+            }
+            
             saveGameState();
         }
         
         function nextPhase() {
-            const phases = ['command', 'movement', 'shooting', 'charge', 'fight', 'morale'];
+            const phases = ['command', 'psychic', 'movement', 'shooting', 'charge', 'fight', 'morale'];
             const idx = phases.indexOf(gameState.phase);
             
             if (idx < phases.length - 1) {
                 setPhase(phases[idx + 1]);
             } else {
-                // End of turn
+                // End of turn - reset psychic powers for new turn
+                resetPsychicPowers();
                 setPhase('command');
                 gameState.turn++;
                 document.getElementById('turnNum').textContent = gameState.turn;
