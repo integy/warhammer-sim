@@ -931,6 +931,15 @@
 
         .fight-unit.fights-first { border-left: 2px solid #ffd700; }
         .fight-unit.fights-last { border-left: 2px solid #c92a2a; }
+        .fight-unit.fought { 
+            opacity: 0.5; 
+            text-decoration: line-through;
+            border-left: 2px solid #333;
+        }
+        .fight-unit.fought::after {
+            content: ' ✅';
+            font-size: 0.7rem;
+        }
 
         .fight-toggle {
             font-size: 0.65rem;
@@ -1394,6 +1403,10 @@
                 <div class="fight-activation" id="fightActivation" style="display: none;">
                     <h4>⚔️ Fight Activation Order</h4>
                     <div id="fightOrderList"></div>
+                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #333;">
+                        <button class="attack-btn" style="width: 100%; background: var(--phase-fight); color: #000; padding: 10px;" onclick="markUnitFought()">✅ Mark Selected as Fought</button>
+                        <button class="btn-small" style="width: 100%; margin-top: 5px; background: var(--danger); color: #fff;" onclick="resetFightStatus()">🔄 Reset All Fight Status</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1421,6 +1434,7 @@
                     <span>⚫ 9" DS Zone</span>
                     <span>🌫️ Obscuring</span>
                     <span>🧱 Heavy Cover</span>
+                    <span>✅ Fought (Fight Phase)</span>
                 </div>
             </div>
             
@@ -1699,7 +1713,8 @@
             army: [],
             selectedUnit: null,
             selectedWeaponIdx: null,
-            unitsOnBoard: [], // {unitIndex, x, y, moved, wounds, battleShock}
+            unitsOnBoard: [], // {unitIndex, x, y, moved, wounds, battleShock, fought}
+            unitsFought: [], // Track which board indices have fought in current Fight phase
             boardMode: null // 'place', 'move', 'range'
         };
         
@@ -3133,9 +3148,10 @@
                 html += '<div class="no-units">None</div>';
             } else {
                 fightsFirst.forEach(u => {
-                    html += `<div class="fight-unit fights-first" onclick="selectUnit(${u.unitIndex})">
+                    const foughtClass = u.fought ? 'fought' : '';
+                    html += `<div class="fight-unit fights-first ${foughtClass}" onclick="selectUnit(${u.unitIndex})">
                         ${u.unit.name.split(' ')[0]}
-                        <button class="fight-toggle" onclick="event.stopPropagation(); toggleFightsLast(${u.idx})">Make Last</button>
+                        ${u.fought ? '' : `<button class="fight-toggle" onclick="event.stopPropagation(); toggleFightsLast(${u.idx})">Make Last</button>`}
                     </div>`;
                 });
             }
@@ -3147,12 +3163,13 @@
                 html += '<div class="no-units">None</div>';
             } else {
                 regular.forEach(u => {
-                    html += `<div class="fight-unit" onclick="selectUnit(${u.unitIndex})">
+                    const foughtClass = u.fought ? 'fought' : '';
+                    html += `<div class="fight-unit ${foughtClass}" onclick="selectUnit(${u.unitIndex})">
                         ${u.unit.name.split(' ')[0]}
-                        <span style="font-size:0.6rem;color:#666">
+                        ${u.fought ? '' : `<span style="font-size:0.6rem;color:#666">
                             <button class="fight-toggle fights-first" onclick="event.stopPropagation(); toggleFightsFirst(${u.idx})">First</button>
                             <button class="fight-toggle fights-last" onclick="event.stopPropagation(); toggleFightsLast(${u.idx})">Last</button>
-                        </span>
+                        </span>`}
                     </div>`;
                 });
             }
@@ -3164,9 +3181,10 @@
                 html += '<div class="no-units">None</div>';
             } else {
                 fightsLast.forEach(u => {
-                    html += `<div class="fight-unit fights-last" onclick="selectUnit(${u.unitIndex})">
+                    const foughtClass = u.fought ? 'fought' : '';
+                    html += `<div class="fight-unit fights-last ${foughtClass}" onclick="selectUnit(${u.unitIndex})">
                         ${u.unit.name.split(' ')[0]}
-                        <button class="fight-toggle" onclick="event.stopPropagation(); toggleFightsLast(${u.idx})">Remove</button>
+                        ${u.fought ? '' : `<button class="fight-toggle" onclick="event.stopPropagation(); toggleFightsLast(${u.idx})">Remove</button>`}
                     </div>`;
                 });
             }
@@ -3190,6 +3208,55 @@
             if (onBoard) {
                 onBoard.fightsLast = !onBoard.fightsLast;
                 updateFightActivationPanel();
+                drawBoard();
+                saveGameState();
+            }
+        }
+        
+        // Mark selected unit as fought in Fight phase
+        function markUnitFought() {
+            if (gameState.phase !== 'fight') {
+                alert('Can only mark units as fought in the Fight phase!');
+                return;
+            }
+            
+            if (gameState.selectedUnit === null) {
+                alert('Select a unit first!');
+                return;
+            }
+            
+            // Find the unit on board
+            const onBoardIdx = gameState.unitsOnBoard.findIndex(u => u.unitIndex === gameState.selectedUnit);
+            if (onBoardIdx < 0) {
+                alert('Unit must be on the board!');
+                return;
+            }
+            
+            const onBoard = gameState.unitsOnBoard[onBoardIdx];
+            if (onBoard.fought) {
+                alert('This unit has already fought!');
+                return;
+            }
+            
+            // Mark as fought
+            onBoard.fought = true;
+            gameState.unitsFought.push(onBoardIdx);
+            
+            updateFightActivationPanel();
+            renderArmy();
+            drawBoard();
+            saveGameState();
+            
+            alert(`✅ ${gameState.army[gameState.selectedUnit].name} marked as fought!`);
+        }
+        
+        // Reset all fight status at end of phase/turn
+        function resetFightStatus() {
+            if (confirm('Reset all fight status for current phase?')) {
+                gameState.unitsFought = [];
+                gameState.unitsOnBoard.forEach(u => u.fought = false);
+                updateFightActivationPanel();
+                renderArmy();
                 drawBoard();
                 saveGameState();
             }
@@ -3276,6 +3343,9 @@
             
             // Update fight activation panel when entering fight phase
             if (phase === 'fight') {
+                // Reset fought status for new fight phase
+                gameState.unitsFought = [];
+                gameState.unitsOnBoard.forEach(u => u.fought = false);
                 updateFightActivationPanel();
             } else {
                 document.getElementById('fightActivation').style.display = 'none';
@@ -3287,6 +3357,7 @@
                 updatePsychicPanel();
             }
             
+            drawBoard();
             saveGameState();
         }
         
@@ -3763,7 +3834,9 @@
                 
                 // Unit circle - different colors for states
                 let fillColor = '#c9a227';
-                if (u.battleShock) {
+                if (u.fought) {
+                    fillColor = '#333'; // Dark gray for already fought
+                } else if (u.battleShock) {
                     fillColor = '#862e9c'; // Purple for battle shock
                 } else if (u.moved) {
                     fillColor = '#666';
@@ -3776,16 +3849,29 @@
                 ctx.fillStyle = fillColor;
                 ctx.fill();
                 
+                // Fought indicator - draw diagonal line through unit
+                if (u.fought && gameState.phase === 'fight') {
+                    ctx.beginPath();
+                    ctx.moveTo(u.x - 12, u.y - 12);
+                    ctx.lineTo(u.x + 12, u.y + 12);
+                    ctx.moveTo(u.x + 12, u.y - 12);
+                    ctx.lineTo(u.x - 12, u.y + 12);
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+                
                 // Border - show fight priority
-                let borderColor = '#fff';
+                let borderColor = u.fought ? '#555' : '#fff';
                 let borderWidth = 2;
                 let indicator = '';
                 
-                if (u.battleShock) {
+                if (u.fought && gameState.phase === 'fight') {
+                    indicator = '✅';
+                } else if (u.battleShock) {
                     borderColor = '#862e9c';
                     borderWidth = 3;
-                }
-                if (u.fightsLast) {
+                } else if (u.fightsLast) {
                     borderColor = '#c92a2a';
                     borderWidth = 4;
                     indicator = '⛔';
@@ -3940,7 +4026,8 @@
                         y: y,
                         moved: false,
                         wounds: 0,
-                        battleShock: false
+                        battleShock: false,
+                        fought: false
                     });
                 }
                 renderArmy();
@@ -3980,7 +4067,9 @@
         function resetMovement() {
             gameState.unitsOnBoard.forEach(u => {
                 u.moved = false;
+                u.fought = false;
             });
+            gameState.unitsFought = [];
             renderArmy();
             drawBoard();
             saveGameState();
