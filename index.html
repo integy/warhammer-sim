@@ -662,6 +662,43 @@
             color: #fff;
         }
 
+        /* Battle Log */
+        .battle-log {
+            max-height: 180px;
+            overflow-y: auto;
+            background: #151515;
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 0.7rem;
+            margin-top: 10px;
+        }
+
+        .battle-log::-webkit-scrollbar { width: 6px; }
+        .battle-log::-webkit-scrollbar-track { background: #1a1a1a; }
+        .battle-log::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+        .log-entry {
+            padding: 4px 6px;
+            margin-bottom: 4px;
+            border-radius: 3px;
+            border-left: 3px solid #444;
+            background: #1e1e1e;
+        }
+
+        .log-entry.roll { border-left-color: var(--phase-shooting); }
+        .log-entry.hit { border-left-color: #ffd700; }
+        .log-entry.wound { border-left-color: var(--danger); }
+        .log-entry.save { border-left-color: var(--success); }
+        .log-entry.damage { border-left-color: #9c27b0; }
+        .log-entry.phase { border-left-color: var(--gold); background: #252525; }
+        .log-entry.kill { border-left-color: #e03131; background: #2d1515; }
+        .log-entry.objective { border-left-color: var(--gold); }
+
+        .log-time { color: #666; font-size: 0.65rem; margin-right: 5px; }
+        .log-msg { color: var(--text); }
+        .log-roll { color: var(--gold); font-weight: bold; }
+        .log-unit { color: #4dabf7; }
+
         /* Army Templates */
         .army-templates {
             display: grid;
@@ -1813,6 +1850,16 @@
                 <div id="selectedSecList" style="color:var(--text-dim);">None</div>
             </div>
             
+            <!-- Battle Log -->
+            <h2 style="margin-top:15px;">📜 Battle Log</h2>
+            <div class="btn-group" style="margin-top:5px;">
+                <button class="btn-small" onclick="clearBattleLog()">🗑️ Clear</button>
+                <button class="btn-small" onclick="exportBattleLog()">📤 Export</button>
+            </div>
+            <div class="battle-log" id="battleLog">
+                <div class="log-entry phase"><span class="log-msg">Battle started - Good luck!</span></div>
+            </div>
+            
             <!-- Army Enhancements (WTC 10th Ed) -->
             <h2 style="margin-top:15px;">✨ Enhancements</h2>
             <div class="objectives" id="enhancements">
@@ -2053,6 +2100,69 @@
             warningEnabled: true
         };
         
+        // Battle Log Functions
+        function addBattleLog(type, message) {
+            const log = document.getElementById('battleLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            
+            const now = new Date();
+            const time = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            entry.innerHTML = `<span class="log-time">${time}</span><span class="log-msg">${message}</span>`;
+            log.insertBefore(entry, log.firstChild);
+            
+            // Keep only last 100 entries
+            while (log.children.length > 100) {
+                log.removeChild(log.lastChild);
+            }
+        }
+
+        function logRoll(unitName, rollType, result, target = '') {
+            const type = rollType === 'hit' ? 'hit' : rollType === 'wound' ? 'wound' : rollType === 'save' ? 'save' : 'roll';
+            addBattleLog(type, `<span class="log-unit">${unitName}</span>: ${rollType} roll <span class="log-roll">${result}</span>${target ? ' (target: ' + target + ')' : ''}`);
+        }
+
+        function logDamage(unitName, damage, wounds) {
+            addBattleLog('damage', `<span class="log-unit">${unitName}</span> takes <span class="log-roll">${damage}</span> damage (${wounds} wounds remaining)`);
+        }
+
+        function logKill(unitName) {
+            addBattleLog('kill', `<span class="log-unit">${unitName}</span> was destroyed! 💀`);
+        }
+
+        function logPhase(phase) {
+            addBattleLog('phase', `🔄 <strong>${phase.toUpperCase()} PHASE</strong>`);
+        }
+
+        function logObjective(player, objectiveNum, action) {
+            addBattleLog('objective', `${player === 'player' ? '✓' : '✗'} Objective ${objectiveNum} ${action}`);
+        }
+
+        function clearBattleLog() {
+            if (confirm('Clear battle log?')) {
+                document.getElementById('battleLog').innerHTML = '<div class="log-entry phase"><span class="log-msg">Battle log cleared</span></div>';
+            }
+        }
+
+        function exportBattleLog() {
+            const log = document.getElementById('battleLog');
+            let text = 'WARHAMMER 40K BATTLE LOG\n';
+            text += '========================\n\n';
+            
+            Array.from(log.children).forEach(entry => {
+                text += entry.textContent + '\n';
+            });
+            
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `battle-log-${new Date().toISOString().slice(0,10)}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
         // Timer Functions
         function startTimer() {
             if (timerState.isRunning) return;
@@ -3654,6 +3764,14 @@
             if (rerollCount > 0) detail += ` (${rerollCount} rerolled)`;
             
             document.getElementById('lastRoll').textContent = detail;
+            
+            // Add to battle log
+            const unitName = gameState.selectedUnit !== null && gameState.army[gameState.selectedUnit] 
+                ? gameState.army[gameState.selectedUnit].name 
+                : 'Unknown';
+            const rollTypeLog = rollType === 'hit' ? 'hit' : rollType === 'wound' ? 'wound' : rollType === 'save' ? 'save' : rollType;
+            const logMsg = `${rollName} roll: [${diceDetails}]${mod !== 0 ? ' +' + mod : ''} → ${successes}/${numDice} success`;
+            logRoll(unitName, rollTypeLog, `${diceDetails} → ${successes}/${numDice}`, '4+');
         }
         
         // Phase Management
@@ -3666,6 +3784,10 @@
                     p.classList.add('active');
                 }
             });
+            
+            // Add phase change to battle log
+            const phaseNames = { command: 'Command', movement: 'Movement', shooting: 'Shooting', psychic: 'Psychic', charge: 'Charge', fight: 'Fight', morale: 'Morale' };
+            logPhase(phaseNames[phase] || phase);
             
             // Update fight activation panel when entering fight phase
             if (phase === 'fight') {
