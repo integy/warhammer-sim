@@ -1882,6 +1882,9 @@
                     <button class="action-btn command active" id="action-generate-cp" onclick="generateCP()">
                         🎯 Generate CP
                     </button>
+                    <button class="action-btn command active" id="action-battleshock-test" onclick="runBattleShockTests()" style="border-left-color: var(--danger);">
+                        ⚠️ Battle-Shock Tests <span class="key">B</span>
+                    </button>
                     
                     <!-- Psychic Phase Actions -->
                     <button class="action-btn psychic hidden" id="action-psychic-manifest" onclick="showPsychicPanel()">
@@ -3467,6 +3470,13 @@
         function rollAttack(weaponIdx) {
             if (gameState.selectedUnit === null) return;
             
+            // Check if unit is battle-shocked
+            const onBoard = gameState.unitsOnBoard.find(u => u.unitIndex === gameState.selectedUnit);
+            if (onBoard && onBoard.battleShock) {
+                alert('❌ CANNOT SHOOT!\n\nThis unit is Battle-Shocked.\nBattle-Shocked units cannot shoot.');
+                return;
+            }
+            
             const unit = gameState.army[gameState.selectedUnit];
             const weapons = parseWeapons(unit.weapons);
             const weapon = weapons[weaponIdx];
@@ -3593,6 +3603,108 @@
             
             // Auto-update morale panel with unit's leadership
             document.getElementById('moraleLd').value = unit.ld;
+        }
+
+        // Battle-Shock Test Function (WTC 10th Edition)
+        // Run Leadership tests for all units that need to check
+        function runBattleShockTests() {
+            if (gameState.phase !== 'command') {
+                alert('Battle-Shock tests should be run in Command Phase');
+                return;
+            }
+            
+            const results = [];
+            let tested = 0;
+            let failed = 0;
+            let passed = 0;
+            
+            gameState.unitsOnBoard.forEach((onBoard, idx) => {
+                const unit = gameState.army[onBoard.unitIndex];
+                if (!unit) return;
+                
+                const models = unit.models || 1;
+                const startingModels = onBoard.startingModels || models;
+                
+                // Check if unit needs to take battle-shock test
+                // 10th edition: If more than half the unit is gone, take test
+                const modelsLost = startingModels - models;
+                const needsTest = modelsLost >= Math.ceil(startingModels / 2);
+                
+                if (needsTest && models > 0) {
+                    tested++;
+                    
+                    // Get leadership (use modified Ld if already battle-shocked)
+                    let ld = parseInt(unit.ld);
+                    if (onBoard.battleShock) ld -= 1;
+                    ld = Math.max(2, ld); // Minimum Ld 2
+                    
+                    // Roll test
+                    const roll = Math.floor(Math.random() * 6) + 1;
+                    const modified = roll;
+                    
+                    // Check if failed
+                    const testFailed = modified > ld;
+                    
+                    if (testFailed) {
+                        failed++;
+                        onBoard.battleShock = true;
+                        results.push({
+                            name: unit.name,
+                            models: models,
+                            lost: modelsLost,
+                            ld: ld,
+                            roll: roll,
+                            result: 'FAILED ⚠️',
+                            effect: 'Battle-Shocked: -1 Ld, Cannot shoot/charge, Fights Last'
+                        });
+                        addBattleLog('battleshock', `<span class="log-unit">${unit.name}</span> is <span class="log-roll">BATTLE-SHOCKED</span>! (${roll} > Ld${ld})`);
+                    } else {
+                        passed++;
+                        results.push({
+                            name: unit.name,
+                            models: models,
+                            lost: modelsLost,
+                            ld: ld,
+                            roll: roll,
+                            result: 'Passed ✅',
+                            effect: 'No effect'
+                        });
+                        addBattleLog('battleshock', `<span class="log-unit">${unit.name}</span> passed Battle-Shock test (${roll} ≤ Ld${ld})`);
+                    }
+                }
+            });
+            
+            // Display results
+            if (tested === 0) {
+                alert('No units need Battle-Shock tests (no units have lost more than half their models)');
+                return;
+            }
+            
+            // Show results in a formatted message
+            let msg = `⚠️ BATTLE-SHOCK TESTS (Command Phase)\n`;
+            msg += `═══════════════════════════════\n`;
+            msg += `Units tested: ${tested} | Passed: ${passed} | Failed: ${failed}\n`;
+            msg += `═══════════════════════════════\n\n`;
+            
+            results.forEach(r => {
+                msg += `${r.name}\n`;
+                msg += `  Models: ${r.models} (lost ${r.lost}) | Ld: ${r.ld} | Roll: ${r.roll}\n`;
+                msg += `  Result: ${r.result}\n`;
+                if (r.effect !== 'No effect') msg += `  ${r.effect}\n`;
+                msg += `\n`;
+            });
+            
+            alert(msg);
+            
+            // Refresh UI
+            renderArmyList();
+            renderBoard();
+            
+            // Show battle-shocked units
+            const bsCount = gameState.unitsOnBoard.filter(u => u.battleShock).length;
+            if (bsCount > 0) {
+                addBattleLog('battleshock', `<span class="log-roll">${bsCount} unit(s) currently Battle-Shocked</span>`);
+            }
         }
 
         // Damage Tracking Functions
@@ -3850,8 +3962,14 @@
                 return;
             }
             
+            // Battle-shocked units fight last - warn user
+            if (onBoard.battleShock) {
+                alert('⚠️ BATTLE-SHOCKED UNIT\n\nThis unit is Battle-Shocked and must fight LAST!\n\nIt can only fight after all non-battle-shocked units have fought.');
+            }
+            
             // Mark as fought
             onBoard.fought = true;
+            onBoard.fightsLast = onBoard.battleShock; // Track that it's fighting last due to battle-shock
             gameState.unitsFought.push(onBoardIdx);
             
             updateFightActivationPanel();
@@ -4081,6 +4199,15 @@
         }
         
         function rollCharge() {
+            // Check if selected unit is battle-shocked
+            if (gameState.selectedUnit !== null) {
+                const onBoard = gameState.unitsOnBoard.find(u => u.unitIndex === gameState.selectedUnit);
+                if (onBoard && onBoard.battleShock) {
+                    alert('❌ CANNOT CHARGE!\n\nThis unit is Battle-Shocked.\nBattle-Shocked units cannot charge.');
+                    return;
+                }
+            }
+            
             const roll1 = Math.floor(Math.random() * 6) + 1;
             const roll2 = Math.floor(Math.random() * 6) + 1;
             const total = roll1 + roll2;
@@ -4905,6 +5032,7 @@
                     gameState.unitsOnBoard[existingIdx].x = x;
                     gameState.unitsOnBoard[existingIdx].y = y;
                 } else {
+                    const unit = gameState.army[gameState.selectedUnit];
                     gameState.unitsOnBoard.push({
                         unitIndex: gameState.selectedUnit,
                         x: x,
@@ -4912,7 +5040,9 @@
                         moved: false,
                         wounds: 0,
                         battleShock: false,
-                        fought: false
+                        fought: false,
+                        startingModels: unit.models || 1,
+                        currentModels: unit.models || 1
                     });
                 }
                 renderArmy();
