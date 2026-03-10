@@ -361,6 +361,146 @@
             text-align: center;
         }
         
+        /* Round History Tracker - WTC */
+        .round-history {
+            margin-top: 15px;
+            padding: 12px;
+            background: #252525;
+            border-radius: 6px;
+            border: 1px solid var(--gold);
+        }
+        
+        .round-history h3 {
+            font-size: 0.8rem;
+            color: var(--gold);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .round-history-table {
+            width: 100%;
+            font-size: 0.7rem;
+            border-collapse: collapse;
+        }
+        
+        .round-history-table th {
+            background: #1a1a1a;
+            padding: 6px 4px;
+            text-align: center;
+            color: var(--text-dim);
+            font-weight: normal;
+            border-bottom: 1px solid #444;
+        }
+        
+        .round-history-table td {
+            padding: 5px 4px;
+            text-align: center;
+            border-bottom: 1px solid #333;
+        }
+        
+        .round-history-table tr.current {
+            background: rgba(201, 162, 39, 0.15);
+        }
+        
+        .round-history-table tr.current td {
+            color: var(--gold);
+            font-weight: bold;
+        }
+        
+        .round-history-table .round-num {
+            color: var(--phase-movement);
+            font-weight: bold;
+        }
+        
+        .round-history-table .vp-player {
+            color: var(--success);
+        }
+        
+        .round-history-table .vp-enemy {
+            color: var(--danger);
+        }
+        
+        .round-history-table .vp-total {
+            color: var(--gold);
+            font-weight: bold;
+        }
+        
+        .round-summary {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #444;
+        }
+        
+        .round-summary .player-total,
+        .round-summary .enemy-total {
+            text-align: center;
+        }
+        
+        .round-summary .label {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            margin-bottom: 3px;
+        }
+        
+        .round-summary .value {
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+        
+        .round-summary .player-total .value {
+            color: var(--success);
+        }
+        
+        .round-summary .enemy-total .value {
+            color: var(--danger);
+        }
+        
+        .victory-margin {
+            margin-top: 10px;
+            padding: 8px;
+            background: #1a1a1a;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .victory-margin .margin-label {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+        }
+        
+        .victory-margin .margin-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        
+        .victory-margin .player-winning {
+            color: var(--success);
+        }
+        
+        .victory-margin .enemy-winning {
+            color: var(--danger);
+        }
+        
+        .victory-margin .tied {
+            color: var(--gold);
+        }
+        
+        .round-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
+        .round-actions button {
+            flex: 1;
+            font-size: 0.7rem;
+            padding: 6px;
+        }
+        
         /* Army List */
         .army-section {
             margin-bottom: 15px;
@@ -1820,6 +1960,42 @@
                 <div class="score-row">
                     <span>Total BP</span>
                     <span id="totalBP">0</span>
+                </div>
+            </div>
+            
+            <!-- WTC Round History Tracker -->
+            <div class="round-history" id="roundHistory">
+                <h3>📊 Round History</h3>
+                <table class="round-history-table">
+                    <thead>
+                        <tr>
+                            <th>Round</th>
+                            <th>Player</th>
+                            <th>Enemy</th>
+                            <th>Margin</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roundHistoryBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+                <div class="round-summary">
+                    <div class="player-total">
+                        <div class="label">👤 PLAYER</div>
+                        <div class="value" id="playerTotalVP">0</div>
+                    </div>
+                    <div class="enemy-total">
+                        <div class="label">👹 ENEMY</div>
+                        <div class="value" id="enemyTotalVP">0</div>
+                    </div>
+                </div>
+                <div class="victory-margin">
+                    <div class="margin-label">Victory Margin</div>
+                    <div class="margin-value" id="victoryMargin">TIE</div>
+                </div>
+                <div class="round-actions">
+                    <button class="btn-small" onclick="recordRoundVP()">📝 Record Round VP</button>
+                    <button class="btn-small" onclick="resetRoundHistory()">↺ Reset</button>
                 </div>
             </div>
             
@@ -4006,6 +4182,117 @@
             const total = primary + sec1 + sec2 + sec3;
             document.getElementById('totalBP').textContent = total;
         }
+        
+        // WTC Round History Tracker
+        let roundHistory = [];
+        
+        function initRoundHistory() {
+            const saved = localStorage.getItem('wtc_round_history');
+            if (saved) {
+                roundHistory = JSON.parse(saved);
+            }
+            renderRoundHistory();
+        }
+        
+        function saveRoundHistory() {
+            localStorage.setItem('wtc_round_history', JSON.stringify(roundHistory));
+        }
+        
+        function recordRoundVP() {
+            const primary = parseInt(document.getElementById('primaryScore').value) || 0;
+            const sec1 = parseInt(document.getElementById('sec1Score').value) || 0;
+            const sec2 = parseInt(document.getElementById('sec2Score').value) || 0;
+            const sec3 = parseInt(document.getElementById('sec3Score').value) || 0;
+            
+            const playerVP = primary + sec1 + sec2 + sec3;
+            
+            const enemyVP = parseInt(prompt('Enter Enemy VP for this round:', '0')) || 0;
+            
+            const round = roundHistory.length + 1;
+            const margin = playerVP - enemyVP;
+            
+            roundHistory.push({
+                round: round,
+                player: playerVP,
+                enemy: enemyVP,
+                margin: margin,
+                primary: primary,
+                secondary: sec1 + sec2 + sec3
+            });
+            
+            saveRoundHistory();
+            renderRoundHistory();
+            
+            // Reset scores for next round
+            document.getElementById('primaryScore').value = 0;
+            document.getElementById('sec1Score').value = 0;
+            document.getElementById('sec2Score').value = 0;
+            document.getElementById('sec3Score').value = 0;
+            updateScore();
+            
+            addLog(`📝 Round ${round} recorded: You ${playerVP} - ${enemyVP} Enemy`);
+        }
+        
+        function renderRoundHistory() {
+            const tbody = document.getElementById('roundHistoryBody');
+            if (!tbody) return;
+            
+            if (roundHistory.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-dim);padding:15px;">No rounds recorded yet</td></tr>';
+                document.getElementById('playerTotalVP').textContent = '0';
+                document.getElementById('enemyTotalVP').textContent = '0';
+                document.getElementById('victoryMargin').textContent = 'TIE';
+                return;
+            }
+            
+            let playerTotal = 0;
+            let enemyTotal = 0;
+            
+            tbody.innerHTML = roundHistory.map((r, idx) => {
+                playerTotal += r.player;
+                enemyTotal += r.enemy;
+                
+                const marginClass = r.margin > 0 ? 'vp-player' : r.margin < 0 ? 'vp-enemy' : '';
+                const isCurrent = idx === roundHistory.length - 1;
+                
+                return `
+                    <tr class="${isCurrent ? 'current' : ''}">
+                        <td class="round-num">R${r.round}</td>
+                        <td class="vp-player">${r.player}</td>
+                        <td class="vp-enemy">${r.enemy}</td>
+                        <td class="${marginClass}">${r.margin > 0 ? '+' : ''}${r.margin}</td>
+                    </tr>
+                `;
+            }).join('');
+            
+            document.getElementById('playerTotalVP').textContent = playerTotal;
+            document.getElementById('enemyTotalVP').textContent = enemyTotal;
+            
+            const totalMargin = playerTotal - enemyTotal;
+            const marginEl = document.getElementById('victoryMargin');
+            
+            if (totalMargin > 0) {
+                marginEl.textContent = `+${totalMargin} (You lead!)`;
+                marginEl.className = 'margin-value player-winning';
+            } else if (totalMargin < 0) {
+                marginEl.textContent = `${totalMargin} (Enemy leads)`;
+                marginEl.className = 'margin-value enemy-winning';
+            } else {
+                marginEl.textContent = 'TIE';
+                marginEl.className = 'margin-value tied';
+            }
+        }
+        
+        function resetRoundHistory() {
+            if (!confirm('Reset all round history?')) return;
+            roundHistory = [];
+            saveRoundHistory();
+            renderRoundHistory();
+            addLog('📝 Round history reset');
+        }
+        
+        // Initialize on load
+        initRoundHistory();
         
         document.querySelectorAll('.score-input').forEach(input => {
             input.addEventListener('change', updateScore);
