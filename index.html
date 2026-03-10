@@ -206,7 +206,74 @@
             margin-left: 5px;
         }
         
-        /* Dice Roller */
+        /* Quick Actions Panel */
+        .quick-actions {
+            margin-top: 20px;
+            padding: 12px;
+            background: #252525;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+        
+        .quick-actions h3 {
+            font-size: 0.8rem;
+            color: var(--gold);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .action-btn {
+            background: #333;
+            color: var(--text);
+            border: 1px solid #444;
+            padding: 10px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            text-align: left;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .action-btn:hover {
+            background: #444;
+            border-color: var(--gold);
+        }
+        
+        .action-btn.command { border-left: 3px solid #666; }
+        .action-btn.psychic { border-left: 3px solid #9c27b0; }
+        .action-btn.movement { border-left: 3px solid var(--phase-movement); }
+        .action-btn.shooting { border-left: 3px solid var(--phase-shooting); }
+        .action-btn.charge { border-left: 3px solid var(--phase-charge); }
+        .action-btn.fight { border-left: 3px solid var(--phase-fight); }
+        .action-btn.morale { border-left: 3px solid var(--phase-morale); }
+        
+        .action-btn.active {
+            display: flex;
+        }
+        
+        .action-btn.hidden {
+            display: none;
+        }
+        
+        .action-btn .key {
+            background: #555;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.65rem;
+            color: #fff;
+            min-width: 20px;
+            text-align: center;
+        }
         .dice-section {
             text-align: center;
         }
@@ -1627,6 +1694,74 @@
                 </div>
             </div>
             
+            <!-- Quick Actions Panel -->
+            <div class="quick-actions">
+                <h3>⚡ Quick Actions</h3>
+                <div class="action-buttons">
+                    <!-- Command Phase Actions -->
+                    <button class="action-btn command active" id="action-stratagem" onclick="showStratagem()">
+                        📜 Use Stratagem <span class="key">S</span>
+                    </button>
+                    <button class="action-btn command active" id="action-generate-cp" onclick="generateCP()">
+                        🎯 Generate CP
+                    </button>
+                    
+                    <!-- Psychic Phase Actions -->
+                    <button class="action-btn psychic hidden" id="action-psychic-manifest" onclick="showPsychicPanel()">
+                        ✨ Manifest Power
+                    </button>
+                    <button class="action-btn psychic hidden" id="action-psychic-deny" onclick="rollDenyTest()">
+                        🚫 Deny the Witch
+                    </button>
+                    
+                    <!-- Movement Phase Actions -->
+                    <button class="action-btn movement hidden" id="action-deepstrike" onclick="toggleDeepStrikeMode()">
+                        🦅 Deep Strike
+                    </button>
+                    <button class="action-btn movement hidden" id="action-advance" onclick="setMovementType('advance')">
+                        🏃 Advance Move
+                    </button>
+                    <button class="action-btn movement hidden" id="action-normal-move" onclick="setMovementType('normal')">
+                        🚶 Normal Move
+                    </button>
+                    
+                    <!-- Shooting Phase Actions -->
+                    <button class="action-btn shooting hidden" id="action-overwatch" onclick="rollOverwatch()">
+                        🔫 Overwatch
+                    </button>
+                    <button class="action-btn shooting hidden" id="action-fire" onclick="focusWeaponPanel()">
+                        💥 Fire Weapon
+                    </button>
+                    
+                    <!-- Charge Phase Actions -->
+                    <button class="action-btn charge hidden" id="action-charge" onclick="rollCharge()">
+                        ⚔️ Charge Roll
+                    </button>
+                    <button class="action-btn charge hidden" id="action-heroic" onclick="heroicIntervention()">
+                        🦸 Heroic Intervention
+                    </button>
+                    
+                    <!-- Fight Phase Actions -->
+                    <button class="action-btn fight hidden" id="action-fights-first" onclick="toggleFightsFirstFromButton()">
+                        ⚡ Fights First
+                    </button>
+                    <button class="action-btn fight hidden" id="action-consolidate" onclick="consolidate()">
+                        📦 Consolidate
+                    </button>
+                    <button class="action-btn fight hidden" id="action-fight-normal" onclick="markUnitFought()">
+                        ✊ Fight Normal
+                    </button>
+                    
+                    <!-- Morale Phase Actions -->
+                    <button class="action-btn morale hidden" id="action-morale-pass" onclick="autoPassMorale()">
+                        ✅ Auto-pass Morale
+                    </button>
+                    <button class="action-btn morale hidden" id="action-battleshock" onclick="toggleBattleShockFromButton()">
+                        😱 Battle Shock
+                    </button>
+                </div>
+            </div>
+            
             <h2>🏆 Score</h2>
             <div class="score-section">
                 <div class="score-row">
@@ -1903,6 +2038,7 @@
             army: [],
             selectedUnit: null,
             selectedWeaponIdx: null,
+            movementType: 'normal', // 'normal' or 'advance'
             unitsOnBoard: [], // {unitIndex, x, y, moved, wounds, battleShock, fought}
             unitsFought: [], // Track which board indices have fought in current Fight phase
             boardMode: null // 'place', 'move', 'range'
@@ -3547,9 +3683,159 @@
                 updatePsychicPanel();
             }
             
+            // Update quick actions panel
+            updateQuickActions(phase);
+            
             drawBoard();
             saveGameState();
         }
+        
+        // Quick Actions Panel Functions
+        function updateQuickActions(phase) {
+            const phases = ['command', 'psychic', 'movement', 'shooting', 'charge', 'fight', 'morale'];
+            
+            // Hide all action buttons first
+            document.querySelectorAll('.action-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.classList.add('hidden');
+            });
+            
+            // Show buttons for current phase
+            const phaseButtons = {
+                'command': ['action-stratagem', 'action-generate-cp'],
+                'psychic': ['action-psychic-manifest', 'action-psychic-deny'],
+                'movement': ['action-deepstrike', 'action-advance', 'action-normal-move'],
+                'shooting': ['action-overwatch', 'action-fire'],
+                'charge': ['action-charge', 'action-heroic'],
+                'fight': ['action-fights-first', 'action-consolidate', 'action-fight-normal'],
+                'morale': ['action-morale-pass', 'action-battleshock']
+            };
+            
+            if (phaseButtons[phase]) {
+                phaseButtons[phase].forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (btn) {
+                        btn.classList.remove('hidden');
+                        btn.classList.add('active');
+                    }
+                });
+            }
+        }
+        
+        // Quick Action Helper Functions
+        function generateCP() {
+            const roll = Math.floor(Math.random() * 6) + 1;
+            let cpGained = 0;
+            if (roll === 6) {
+                cpGained = 2;
+            } else {
+                cpGained = 1;
+            }
+            gameState.cp = Math.min(gameState.cp + cpGained, 4);
+            updateCP();
+            alert(`Rolled ${roll}: Gained ${cpGained} CP!`);
+        }
+        
+        function showPsychicPanel() {
+            updatePsychicPanel();
+            const panel = document.getElementById('psychicPanel');
+            if (panel) {
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+        
+        let deepStrikeMode = false;
+        function toggleDeepStrikeMode() {
+            deepStrikeMode = !deepStrikeMode;
+            const btn = document.getElementById('action-deepstrike');
+            if (deepStrikeMode) {
+                btn.style.background = '#2d5a2d';
+                btn.innerHTML = '🦅 Deep Strike ON';
+                alert('Deep Strike mode enabled. Click on board to place unit.');
+            } else {
+                btn.style.background = '';
+                btn.innerHTML = '🦅 Deep Strike';
+            }
+        }
+        
+        function setMovementType(type) {
+            gameState.movementType = type;
+            const typeLabel = type === 'advance' ? 'Advance' : 'Normal';
+            alert(`${typeLabel} movement mode set. Units can move ${typeLabel === 'Advance' ? 'D6 + 7"' : '12"'}.`);
+        }
+        
+        function rollOverwatch() {
+            const roll = Math.floor(Math.random() * 6) + 1;
+            let result = 'MISS';
+            if (roll === 6) {
+                result = 'HIT! (Roll to hit)';
+            } else if (roll >= 4) {
+                result = 'Suppressing Fire';
+            }
+            alert(`Overwatch roll: ${roll} - ${result}`);
+        }
+        
+        function focusWeaponPanel() {
+            const panel = document.getElementById('weaponPanel');
+            if (panel) {
+                panel.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+        
+        function rollCharge() {
+            const roll1 = Math.floor(Math.random() * 6) + 1;
+            const roll2 = Math.floor(Math.random() * 6) + 1;
+            const total = roll1 + roll2;
+            alert(`Charge Roll: ${roll1} + ${roll2} = ${total}"\nNeed to reach target!`);
+        }
+        
+        function heroicIntervention() {
+            alert('Heroic Intervention: Move 3" towards enemy unit in engagement range.');
+        }
+        
+        function toggleFightsFirstFromButton() {
+            // Toggle fights first for selected unit
+            if (gameState.selectedUnit !== null) {
+                const unit = gameState.unitsOnBoard[gameState.selectedUnit];
+                if (unit) {
+                    unit.fightsFirst = !unit.fightsFirst;
+                    alert(`${unit.name} fights first: ${unit.fightsFirst ? 'YES' : 'NO'}`);
+                }
+            } else {
+                alert('Select a unit on the board first!');
+            }
+        }
+        
+        function consolidate() {
+            alert('Consolidate: Move up to 3" towards closest enemy - can move through engagement range of enemies not targeted.');
+        }
+        
+        function autoPassMorale() {
+            if (gameState.selectedUnit !== null) {
+                const unit = gameState.unitsOnBoard[gameState.selectedUnit];
+                if (unit) {
+                    unit.battleShocked = false;
+                    alert(`${unit.name} passed morale test!`);
+                }
+            } else {
+                // Auto-pass all units
+                gameState.unitsOnBoard.forEach(u => u.battleShocked = false);
+                alert('All units passed morale!');
+            }
+        }
+        
+        function toggleBattleShockFromButton() {
+            if (gameState.selectedUnit !== null) {
+                toggleBattleShock();
+            } else {
+                alert('Select a unit on the board first!');
+            }
+        }
+        
+        // Initialize quick actions on load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateQuickActions(gameState.phase);
+        });
         
         function nextPhase() {
             const phases = ['command', 'psychic', 'movement', 'shooting', 'charge', 'fight', 'morale'];
@@ -4436,6 +4722,48 @@
             
             // Hide deep strike panel initially
             document.getElementById('deepStrikePanel').style.display = 'none';
+            
+            // Initialize quick actions
+            updateQuickActions(gameState.phase);
+            
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                // Ignore if typing in input
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                
+                switch(e.key.toLowerCase()) {
+                    case 's':
+                        if (gameState.phase === 'command') showStratagem();
+                        break;
+                    case 'n':
+                        nextPhase();
+                        break;
+                    case 'r':
+                        resetGame();
+                        break;
+                    case '1':
+                        setPhase('command');
+                        break;
+                    case '2':
+                        setPhase('psychic');
+                        break;
+                    case '3':
+                        setPhase('movement');
+                        break;
+                    case '4':
+                        setPhase('shooting');
+                        break;
+                    case '5':
+                        setPhase('charge');
+                        break;
+                    case '6':
+                        setPhase('fight');
+                        break;
+                    case '7':
+                        setPhase('morale');
+                        break;
+                }
+            });
         }
         init();
     </script>
