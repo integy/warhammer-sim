@@ -3505,9 +3505,14 @@
                     `;
                 }
                 
+                // Determine movement type based on Toughness
+                const moveType = unit.t >= 7 ? '🚜 Vehicle' : unit.t <= 4 ? '👣 Infantry' : '🦾 Beast';
+                const moveInfo = unit.t >= 7 ? '3-9" Move | 9-12" Adv | 9-12" FB' : '3-6" Move | 6" Adv | 6" FB';
+                
                 card.innerHTML = `
                     <div class="unit-name">${unit.name} <span style="color:var(--gold)">(${unit.pts}pts)</span>${unit.fightsFirst ? ' ⚡' : ''}${onBoard ? (onBoard.battleShock ? ' ⚠️' : ' 📍') : ''}</div>
                     <div class="unit-stats">M${unit.models} | WS${unit.ws} | BS${unit.bs} | S${unit.s} T${unit.t} W${unit.w} LD${unit.ld} SV${unit.sv}${unit.fightsFirst ? ' | ⚡Fights First' : ''}</div>
+                    <div class="unit-movement" style="font-size:0.7rem;color:#888;margin-top:4px">${moveType} | ${moveInfo}</div>
                     <div class="unit-weapons">${unit.weapons}</div>
                     ${healthHtml}
                     <div class="movement-info">${unit.fightsFirst ? '⚡ Charges/Fights first | ' : ''}${gameState.boardMode === 'range' && onBoard ? '📏 Click board to show 3" range' : (gameState.boardMode === 'move' && onBoard ? '🏃 Click to move (max 3")' : (gameState.boardMode === 'place' ? '📍 Click board to place' : ''))}</div>
@@ -5007,6 +5012,42 @@
                             }
                         });
                         ctx.setLineDash([]);
+                        
+                        // Show Advance and Fall Back ranges in Movement phase
+                        if (gameState.phase === 'movement' || gameState.boardMode === 'range') {
+                            // Advance range (D6" for infantry, D6"+3" for vehicles)
+                            const advanceMin = isVehicle ? 300 : 150; // 3" + 6" = 9" for vehicles, 6" for infantry
+                            const advanceMax = isVehicle ? 450 : 300; // 9" for vehicles, 6" for infantry
+                            
+                            // Draw Advance range
+                            ctx.beginPath();
+                            ctx.arc(selectedOnBoard.x, selectedOnBoard.y, advanceMax, 0, Math.PI * 2);
+                            ctx.strokeStyle = 'rgba(246, 187, 59, 0.3)';
+                            ctx.lineWidth = 2;
+                            ctx.setLineDash([8, 4]);
+                            ctx.stroke();
+                            
+                            // Advance label
+                            ctx.fillStyle = 'rgba(246, 187, 59, 0.8)';
+                            ctx.font = 'bold 9px Arial';
+                            ctx.textAlign = 'center';
+                            const advanceLabel = isVehicle ? 'ADV: 9-12"' : 'ADV: 6"';
+                            ctx.fillText(advanceLabel, selectedOnBoard.x, selectedOnBoard.y + advanceMax + 12);
+                            
+                            // Fall Back range (D6" + 3" for all units)
+                            const fallBackDist = isVehicle ? 450 : 300; // Same as advance
+                            ctx.beginPath();
+                            ctx.arc(selectedOnBoard.x, selectedOnBoard.y, fallBackDist, 0, Math.PI * 2);
+                            ctx.strokeStyle = 'rgba(201, 42, 42, 0.25)';
+                            ctx.lineWidth = 2;
+                            ctx.stroke();
+                            
+                            ctx.fillStyle = 'rgba(201, 42, 42, 0.7)';
+                            const fbLabel = isVehicle ? 'FB: 9-12"' : 'FB: 6"';
+                            ctx.fillText(fbLabel, selectedOnBoard.x, selectedOnBoard.y + fallBackDist + 24);
+                            
+                            ctx.setLineDash([]);
+                        }
                         
                         // Charge range visualization (D6 + 2" = average ~5.5" = ~275px base)
                         if (gameState.phase === 'charge' || gameState.boardMode === 'range') {
