@@ -489,6 +489,103 @@
             color: var(--gold);
         }
         
+        /* Charge Distance Calculator */
+        .charge-calc {
+            margin-top: 15px;
+            padding: 10px;
+            background: #252525;
+            border-radius: 4px;
+            border-left: 3px solid var(--phase-charge);
+        }
+
+        .charge-calc h4 {
+            font-size: 0.8rem;
+            color: var(--phase-charge);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .charge-calc .result {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .charge-calc .result-box {
+            background: #1a1a1a;
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .charge-calc .result-box .label {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+        }
+
+        .charge-calc .result-box .value {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--phase-charge);
+        }
+
+        .charge-calc .result-box .value.avg {
+            color: var(--gold);
+        }
+
+        .charge-calc .result-box .value.max {
+            color: var(--success);
+        }
+
+        .charge-calc .target-input {
+            display: flex;
+            gap: 5px;
+            margin-top: 8px;
+        }
+
+        .charge-calc .target-input input {
+            flex: 1;
+            background: #333;
+            color: var(--text);
+            border: 1px solid #444;
+            padding: 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
+        .charge-calc .target-input button {
+            background: var(--phase-charge);
+            color: #fff;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+
+        .charge-calc .probability {
+            margin-top: 8px;
+            padding: 6px;
+            background: #1a1a1a;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            text-align: center;
+        }
+
+        .charge-calc .probability.success {
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .charge-calc .probability.fail {
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+        
         .round-actions {
             display: flex;
             gap: 5px;
@@ -2323,6 +2420,38 @@
                 <div class="total-expected">
                     <div class="label">TOTAL EXPECTED DAMAGE</div>
                     <div class="value" id="totalExpected">-</div>
+                </div>
+            </div>
+
+            <!-- Charge Distance Calculator -->
+            <div class="charge-calc">
+                <h4>⚔️ Charge Calculator (WTC)</h4>
+                <div class="result">
+                    <div class="result-box">
+                        <div class="label">Minimum</div>
+                        <div class="value" id="chargeMin">-</div>
+                    </div>
+                    <div class="result-box">
+                        <div class="label">Average</div>
+                        <div class="value avg" id="chargeAvg">-</div>
+                    </div>
+                </div>
+                <div class="result" style="margin-top: 8px;">
+                    <div class="result-box">
+                        <div class="label">Maximum</div>
+                        <div class="value max" id="chargeMax">-</div>
+                    </div>
+                    <div class="result-box">
+                        <div class="label">Reroll Available</div>
+                        <div class="value" id="chargeReroll" style="color: var(--phase-movement);">-</div>
+                    </div>
+                </div>
+                <div class="target-input">
+                    <input type="number" id="chargeTargetDist" placeholder="Target distance (e.g., 6)" min="1" max="24">
+                    <button onclick="calculateCharge()">🎯 Calc</button>
+                </div>
+                <div class="probability" id="chargeProb">
+                    Enter target distance to calculate charge probability
                 </div>
             </div>
         </div>
@@ -5379,6 +5508,61 @@
             document.getElementById('expWoundPct').textContent = (woundProb * 100).toFixed(1) + '%';
             document.getElementById('expDamage').textContent = (expectedWounds * failSaveProb).toFixed(1) + ' MW';
             document.getElementById('totalExpected').textContent = expectedDamage.toFixed(1);
+        }
+        
+        // Charge Distance Calculator (WTC 10th Ed)
+        function calculateCharge() {
+            const targetDist = parseInt(document.getElementById('chargeTargetDist').value);
+            
+            const minCharge = 2;
+            const maxCharge = 12;
+            const avgCharge = 7;
+            
+            document.getElementById('chargeMin').textContent = minCharge + '"';
+            document.getElementById('chargeAvg').textContent = avgCharge + '"';
+            document.getElementById('chargeMax').textContent = maxCharge + '"';
+            
+            let hasReroll = false;
+            if (gameState.selectedUnit !== null) {
+                const selectedUnit = gameState.army[gameState.selectedUnit];
+                if (selectedUnit && selectedUnit.weapons) {
+                    const w = selectedUnit.weapons.toLowerCase();
+                    hasReroll = w.includes('lance') || w.includes('veteran');
+                }
+            }
+            document.getElementById('chargeReroll').textContent = hasReroll ? '✓ Yes' : '✗ No';
+            
+            if (!targetDist) {
+                document.getElementById('chargeProb').textContent = 'Enter target distance';
+                document.getElementById('chargeProb').className = 'probability';
+                return;
+            }
+            
+            let successCount = 0;
+            for (let d1 = 1; d1 <= 6; d1++) {
+                for (let d2 = 1; d2 <= 6; d2++) {
+                    const roll = Math.max(d1, d2);
+                    if (roll >= targetDist) successCount++;
+                    else if (hasReroll) {
+                        const rerollSuccess = (d1 < targetDist && d2 >= targetDist) || (d2 < targetDist && d1 >= targetDist);
+                        if (rerollSuccess) successCount += 0.5;
+                    }
+                }
+            }
+            
+            const prob = (successCount / 36) * 100;
+            const probEl = document.getElementById('chargeProb');
+            
+            if (targetDist <= 6) {
+                probEl.textContent = `✅ ${prob.toFixed(1)}% to charge ${targetDist}"`;
+                probEl.className = 'probability success';
+            } else if (targetDist <= 9) {
+                probEl.textContent = `⚠️ ${prob.toFixed(1)}% to charge ${targetDist}"`;
+                probEl.className = 'probability fail';
+            } else {
+                probEl.textContent = `❌ ${prob.toFixed(1)}% to charge ${targetDist}"`;
+                probEl.className = 'probability fail';
+            }
         }
         
         // Initialize
