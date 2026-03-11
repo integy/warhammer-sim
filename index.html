@@ -1955,6 +1955,50 @@
                     Last: <span id="lastRoll">-</span>
                 </div>
             </div>
+            
+            <!-- Critical Wounds Panel -->
+            <div class="panel" style="margin-top: 15px;">
+                <h2>💥 Critical Wounds (10th Ed)</h2>
+                
+                <div class="dice-controls" style="grid-template-columns: 1fr 1fr;">
+                    <div>
+                        <label>Attacks</label>
+                        <input type="number" id="critAttacks" value="1" min="1" max="30">
+                    </div>
+                    <div>
+                        <label>Weapon D</label>
+                        <select id="critWeaponD">
+                            <option value="1">D1</option>
+                            <option value="2">D2</option>
+                            <option value="3">D3</option>
+                            <option value="4">D4</option>
+                            <option value="D3">D3+1</option>
+                            <option value="D6">D6</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="margin: 8px 0;">
+                    <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 6px;">
+                        <input type="checkbox" id="hasDevastating"> 
+                        <span style="color: #e03131;">⚡ Devastating Wounds</span>
+                    </label>
+                    <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+                        <input type="checkbox" id="hasLethal"> 
+                        <span style="color: #be4bdb;">💀 Lethal Hits</span>
+                    </label>
+                    <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+                        <input type="checkbox" id="hasMortal"> 
+                        <span style="color: #f76707;">☠️ Auto-wound</span>
+                    </label>
+                </div>
+                
+                <button class="dice-btn" style="background: #9c27b0;" onclick="rollCriticalWounds()">ROLL CRITICALS</button>
+                
+                <div class="dice-result" id="critResult" style="font-size: 0.8rem;">-</div>
+                
+                <div id="critBreakdown" style="font-size: 0.7rem; color: var(--text-dim); margin-top: 5px;"></div>
+            </div>
         </div>
         
         <!-- Right Panel: Phase & Score -->
@@ -4274,6 +4318,112 @@
             const rollTypeLog = rollType === 'hit' ? 'hit' : rollType === 'wound' ? 'wound' : rollType === 'save' ? 'save' : rollType;
             const logMsg = `${rollName} roll: [${diceDetails}]${mod !== 0 ? ' +' + mod : ''} → ${successes}/${numDice} success`;
             logRoll(unitName, rollTypeLog, `${diceDetails} → ${successes}/${numDice}`, '4+');
+        }
+        
+        // Critical Wounds Roller (10th Ed - Devastating Wounds, Lethal Hits, Auto-wound)
+        function rollCriticalWounds() {
+            const attacks = parseInt(document.getElementById('critAttacks').value) || 1;
+            const weaponD = document.getElementById('critWeaponD').value;
+            const hasDevastating = document.getElementById('hasDevastating').checked;
+            const hasLethal = document.getElementById('hasLethal').checked;
+            const hasMortal = document.getElementById('hasMortal').checked;
+            
+            let critWounds = 0;
+            let normalWounds = 0;
+            let mortalWounds = 0;
+            let lethals = 0;
+            const rolls = [];
+            
+            // Parse weapon damage
+            let baseD = 1;
+            let variableD = false;
+            if (weaponD === 'D3') { baseD = 3; variableD = true; }
+            else if (weaponD === 'D6') { baseD = 6; variableD = true; }
+            else if (weaponD === 'D3+1') { baseD = 3; variableD = true; }
+            else { baseD = parseInt(weaponD); }
+            
+            for (let i = 0; i < attacks; i++) {
+                const roll = Math.floor(Math.random() * 6) + 1;
+                let rollDisplay = roll.toString();
+                
+                // Check for auto-wound (Mortal Wounds)
+                if (hasMortal) {
+                    mortalWounds++;
+                    rollDisplay += ' ☠️';
+                }
+                
+                // Lethal Hits: 6s always wound
+                if (hasLethal && roll === 6) {
+                    lethals++;
+                    critWounds++;
+                    rollDisplay += ' 💀';
+                }
+                
+                // Normal wound roll (4+ to wound for most weapons)
+                if (!hasLethal || roll < 6) {
+                    // Assume 4+ to wound
+                    const woundRoll = Math.floor(Math.random() * 6) + 1;
+                    rollDisplay += ' → ' + woundRoll;
+                    
+                    // Critical wound on 6
+                    if (woundRoll === 6) {
+                        critWounds++;
+                        rollDisplay += ' 💥';
+                    } else if (woundRoll >= 4) {
+                        normalWounds++;
+                    }
+                }
+                
+                rolls.push(rollDisplay);
+            }
+            
+            // Calculate damage
+            let totalDamage = 0;
+            let damageBreakdown = [];
+            
+            // Calculate normal wounds damage
+            for (let i = 0; i < normalWounds; i++) {
+                let dmg = baseD;
+                if (variableD) dmg = Math.floor(Math.random() * baseD) + 1;
+                if (weaponD === 'D3+1') dmg += 1;
+                totalDamage += dmg;
+            }
+            if (normalWounds > 0) damageBreakdown.push(`${normalWounds} normal → ${totalDamage} dmg`);
+            
+            // Add critical wounds (Devastating Wounds bypasses save)
+            let critDamage = 0;
+            if (critWounds > 0) {
+                for (let i = 0; i < critWounds; i++) {
+                    let dmg = baseD;
+                    if (variableD) dmg = Math.floor(Math.random() * baseD) + 1;
+                    if (weaponD === 'D3+1') dmg += 1;
+                    critDamage += dmg;
+                }
+                totalDamage += critDamage;
+                if (critWounds > 0) damageBreakdown.push(`${critWounds} crit → ${critDamage} dmg (DEVASTATING)`);
+            }
+            
+            // Add mortal wounds
+            totalDamage += mortalWounds;
+            if (mortalWounds > 0) damageBreakdown.push(`${mortalWounds} mortal wounds`);
+            
+            // Display results
+            const result = document.getElementById('critResult');
+            let resultText = `⚔️ ${attacks} attacks → ${totalDamage} total damage`;
+            if (critWounds > 0) resultText += ` (${critWounds} CRITICAL!)`;
+            if (hasDevastating) resultText += ` ⚡`;
+            if (lethals > 0) resultText += ` (${lethals} lethal)`;
+            
+            result.textContent = resultText;
+            result.className = 'dice-result ' + (critWounds > 0 || totalDamage > attacks ? 'success' : 'fail');
+            
+            // Breakdown
+            const breakdown = document.getElementById('critBreakdown');
+            breakdown.innerHTML = rolls.join(', ') + '<br>' + damageBreakdown.join(', ');
+            
+            // Log it
+            logRoll(gameState.selectedUnit !== null ? gameState.army[gameState.selectedUnit]?.name : 'Unit', 
+                'crit', `${rolls.join(', ')}`, `${totalDamage} dmg`);
         }
         
         // Phase Management
