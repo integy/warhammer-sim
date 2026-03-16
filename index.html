@@ -1697,6 +1697,7 @@
                 <button class="template-btn" onclick="loadTemplate('orks')">🐗 Orks</button>
                 <button class="template-btn" onclick="loadTemplate('tyranids')">🧬 Tyranids</button>
                 <button class="template-btn" onclick="loadTemplate('deathguard')">☠️ Death Guard</button>
+                <button class="template-btn" onclick="loadTemplate('chaosknights')">👹 Chaos Knights</button>
                 <button class="template-btn" onclick="loadTemplate('tau')">🔵 Tau</button>
             </div>
 
@@ -2753,7 +2754,18 @@
             'Fusion Blaster': { range: '18"', s: 'S8', ap: '-4', d: 'D6', abilities: 'Melta' },
             'Cyclic Ion Blaster': { range: '24"', s: 'S7', ap: '-2', d: '2', abilities: 'Sustained Hits 1' },
             'Rail Rifle': { range: '36"', s: 'S10', ap: '-4', d: 'D6+1', abilities: 'Sniper' },
-            'Smart Missile System': { range: '18"', s: 'S5', ap: '0', d: '1', abilities: 'Ignore Cover' }
+            'Smart Missile System': { range: '18"', s: 'S5', ap: '0', d: '1', abilities: 'Ignore Cover' },
+            // Chaos Knights
+            'Despoiler Gatling': { range: '36"', s: 'S6', ap: '-2', d: '2', abilities: 'Twin-linked' },
+            'Daemonbreath Meltagun': { range: '12"', s: 'S9', ap: '-4', d: 'D6', abilities: 'Melta' },
+            'Heavy Darkflamer': { range: '12"', s: 'S5', ap: '-1', d: '1', abilities: 'Ignores Cover, Torrent' },
+            'Ruinspear Rocket Pod': { range: '48"', s: 'S8', ap: '-2', d: 'D6', abilities: '' },
+            'War Dog Autocannon': { range: '48"', s: 'S7', ap: '-1', d: '2', abilities: '' },
+            'Daemonbreath Spear': { range: '24"', s: 'S8', ap: '-3', d: '3', abilities: '' },
+            'Havoc Multi-launcher': { range: '48"', s: 'S8', ap: '-2', d: '3', abilities: 'D3 shots' },
+            'Reaper Chaintalon': { range: 'Melee', s: 'S9', ap: '-3', d: '3', abilities: '' },
+            'Slaughterclaw': { range: 'Melee', s: 'S8', ap: '-2', d: '3', abilities: '' },
+            'Titanic Feet': { range: 'Melee', s: 'S8', ap: '-1', d: '2', abilities: '' }
         };
 
         // Psychic Powers Database (WTC 10th Ed)
@@ -3045,6 +3057,13 @@
                 { name: 'Warlord Trait: EM', cost: 25, effect: '3+ invulnerable' },
                 { name: 'Onager Construct', cost: 20, effect: 'FNP 6+ vs ranged' }
             ],
+            chaosknights: [
+                // Infernal Lance Enhancements
+                { name: 'urfex\'s Helm', cost: 25, effect: 'Enemy -1 Leadership aura' },
+                { name: 'Gorgon\'s Eye', cost: 30, effect: '4+ invulnerable save' },
+                { name: 'The生化 Carapace', cost: 35, effect: 'Feel No Pain 5+' },
+                { name: 'Infernal Quest', cost: 20, effect: 'Advance + Charge' }
+            ],
             generic: [
                 { name: 'Relic', cost: 20, effect: '4+ invulnerable save' },
                 { name: 'Warlord', cost: 0, effect: '+3" Leadership aura' },
@@ -3292,6 +3311,19 @@
                 { name: 'Kroot Carnivores', pts: 60, models: 20, ws: 4, bs: 4, s: 3, t: 3, w: 1, ld: 5, sv: 6, weapons: 'Close Combat (S, AP-1, 1)' },
                 { name: 'Devilfish', pts: 110, models: 1, ws: 4, bs: 3, s: 5, t: 6, w: 10, ld: 6, sv: 4, weapons: 'Burst Cannon (18", S5, AP-1, 1)' },
                 { name: 'Riptide', pts: 180, models: 1, ws: 4, bs: 3, s: 6, t: 6, w: 14, ld: 6, sv: 3, weapons: 'Ion Accelerator (30", S7, AP-2, D3)' }
+            ],
+            chaosknights: [
+                // CHARACTERS - 3x Knight Despoiler (1170pts)
+                { name: 'Knight Despoiler (Warlord)', pts: 390, models: 1, ws: 3, bs: 3, s: 8, t: 8, w: 24, ld: 6, sv: 3, weapons: '2x Gatling (36", S6, AP-2, D2), Meltagun (12", S9, AP-4, D6), 2x Darkflamer (12", S5, AP-1, D1), Rocket Pod (48", S8, AP-2, D6), Titanic Feet (S8, AP-1, D2)', isWarlord: true },
+                { name: 'Knight Despoiler', pts: 390, models: 1, ws: 3, bs: 3, s: 8, t: 8, w: 24, ld: 6, sv: 3, weapons: '2x Gatling (36", S6, AP-2, D2), Meltagun (12", S9, AP-4, D6), 2x Darkflamer (12", S5, AP-1, D1), Rocket Pod (48", S8, AP-2, D6), Titanic Feet (S8, AP-1, D2)' },
+                { name: 'Knight Despoiler', pts: 390, models: 1, ws: 3, bs: 3, s: 8, t: 8, w: 24, ld: 6, sv: 3, weapons: '2x Gatling (36", S6, AP-2, D2), Meltagun (12", S9, AP-4, D6), 2x Darkflamer (12", S5, AP-1, D1), Rocket Pod (48", S8, AP-2, D6), Titanic Feet (S8, AP-1, D2)' },
+                // OTHER DATASHEETS - War Dogs (830pts)
+                { name: 'War Dog Executioner', pts: 130, models: 1, ws: 3, bs: 3, s: 6, t: 6, w: 10, ld: 6, sv: 3, weapons: '2x Autocannon (48", S7, AP-1, D2), Meltagun (12", S9, AP-4, D6)' },
+                { name: 'War Dog Executioner', pts: 130, models: 1, ws: 3, bs: 3, s: 6, t: 6, w: 10, ld: 6, sv: 3, weapons: '2x Autocannon (48", S7, AP-1, D2), Meltagun (12", S9, AP-4, D6)' },
+                { name: 'War Dog Karnivore', pts: 150, models: 1, ws: 3, bs: 3, s: 6, t: 6, w: 10, ld: 6, sv: 3, weapons: 'Havoc ML (48", S8, AP-2, D3), Chaintalon (S9, AP-3, D3), Slaughterclaw (S8, AP-2, D3)' },
+                { name: 'War Dog Stalker', pts: 140, models: 1, ws: 3, bs: 3, s: 6, t: 6, w: 10, ld: 6, sv: 3, weapons: 'Spear (24", S8, AP-3, D3), Havoc ML (48", S8, AP-2, D3), Slaughterclaw (S8, AP-2, D3)' },
+                { name: 'War Dog Stalker', pts: 140, models: 1, ws: 3, bs: 3, s: 6, t: 6, w: 10, ld: 6, sv: 3, weapons: 'Spear (24", S8, AP-3, D3), Havoc ML (48", S8, AP-2, D3), Slaughterclaw (S8, AP-2, D3)' },
+                { name: 'War Dog Stalker', pts: 140, models: 1, ws: 3, bs: 3, s: 6, t: 6, w: 10, ld: 6, sv: 3, weapons: 'Spear (24", S8, AP-3, D3), Havoc ML (48", S8, AP-2, D3), Slaughterclaw (S8, AP-2, D3)' }
             ]
         };
 
